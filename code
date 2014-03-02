@@ -1,0 +1,2530 @@
+---Package for AES-128
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_unsigned.all;
+
+package aes_package is
+
+type state_array_type is array (0 to 3) of std_logic_vector(7 downto 0);
+
+-- S-Box look up function
+function sbox_val(address: std_logic_vector(7 downto 0)) return std_logic_vector;
+
+-- Inverse S-Box look up function
+function inv_sbox_val(address: std_logic_vector(7 downto 0)) return std_logic_vector;
+
+-- column generation fucntion for Mix columns routine
+function col_transform(p: state_array_type) return std_logic_vector;
+
+-- column generation fucntion for Inverse Mix columns routine
+function col_inv_transform(s: state_array_type) return std_logic_vector;
+
+function mix_cols_routine
+     (
+       a_r0 : state_array_type;
+       a_r1 : state_array_type;
+       a_r2 : state_array_type;
+       a_r3 : state_array_type;
+       mode : std_logic
+     )
+return std_logic_vector;
+end aes_package; 
+
+package body aes_package is
+
+----Defining function sox_val
+
+function sbox_val(address: std_logic_vector(7 downto 0)) return std_logic_vector is
+variable data: bit_vector(7 downto 0);
+variable data_stdlogic: std_logic_vector(7 downto 0);
+
+begin
+
+case address is
+
+  when "00000000" => data := X"63";
+  when "00000001" => data := X"7C";
+  when "00000010" => data := X"77";
+  when "00000011" => data := X"7B";
+  when "00000100" => data := X"F2";
+  when "00000101" => data := X"6B";
+  when "00000110" => data := X"6F";
+  when "00000111" => data := X"C5";
+  when "00001000" => data := X"30";
+  when "00001001" => data := X"01";
+  when "00001010" => data := X"67";
+  when "00001011" => data := X"2B";
+  when "00001100" => data := X"FE";
+  when "00001101" => data := X"D7";
+  when "00001110" => data := X"AB";
+  when "00001111" => data := X"76";
+  when "00010000" => data := X"CA";
+  when "00010001" => data := X"82";
+  when "00010010" => data := X"C9";
+  when "00010011" => data := X"7D";
+  when "00010100" => data := X"FA";
+  when "00010101" => data := X"59";
+  when "00010110" => data := X"47";
+  when "00010111" => data := X"F0";
+  when "00011000" => data := X"AD";
+  when "00011001" => data := X"D4";
+  when "00011010" => data := X"A2";
+  when "00011011" => data := X"AF";
+  when "00011100" => data := X"9C";
+  when "00011101" => data := X"A4";
+  when "00011110" => data := X"72";
+  when "00011111" => data := X"C0";
+  when "00100000" => data := X"B7";
+  when "00100001" => data := X"FD";
+  when "00100010" => data := X"93";
+  when "00100011" => data := X"26";
+  when "00100100" => data := X"36";
+  when "00100101" => data := X"3F";
+  when "00100110" => data := X"F7";
+  when "00100111" => data := X"CC";
+  when "00101000" => data := X"34";
+  when "00101001" => data := X"A5";
+  when "00101010" => data := X"E5";
+  when "00101011" => data := X"F1";
+  when "00101100" => data := X"71";
+  when "00101101" => data := X"D8";
+  when "00101110" => data := X"31";
+  when "00101111" => data := X"15";
+  when "00110000" => data := X"04";
+  when "00110001" => data := X"C7";
+  when "00110010" => data := X"23";
+  when "00110011" => data := X"C3";
+  when "00110100" => data := X"18";
+  when "00110101" => data := X"96";
+  when "00110110" => data := X"05";
+  when "00110111" => data := X"9A";
+  when "00111000" => data := X"07";
+  when "00111001" => data := X"12";
+  when "00111010" => data := X"80";
+  when "00111011" => data := X"E2";
+  when "00111100" => data := X"EB";
+  when "00111101" => data := X"27";
+  when "00111110" => data := X"B2";
+  when "00111111" => data := X"75";
+  when "01000000" => data := X"09";
+  when "01000001" => data := X"83";
+  when "01000010" => data := X"2C";
+  when "01000011" => data := X"1A";
+  when "01000100" => data := X"1B";
+  when "01000101" => data := X"6E";
+  when "01000110" => data := X"5A";
+  when "01000111" => data := X"A0";
+  when "01001000" => data := X"52";
+  when "01001001" => data := X"3B";
+  when "01001010" => data := X"D6";
+  when "01001011" => data := X"B3";
+  when "01001100" => data := X"29";
+  when "01001101" => data := X"E3";
+  when "01001110" => data := X"2F";
+  when "01001111" => data := X"84";
+  when "01010000" => data := X"53";
+  when "01010001" => data := X"D1";
+  when "01010010" => data := X"00";
+  when "01010011" => data := X"ED";
+  when "01010100" => data := X"20";
+  when "01010101" => data := X"FC";
+  when "01010110" => data := X"B1";
+  when "01010111" => data := X"5B";
+  when "01011000" => data := X"6A";
+  when "01011001" => data := X"CB";
+  when "01011010" => data := X"BE";
+  when "01011011" => data := X"39";
+  when "01011100" => data := X"4A";
+  when "01011101" => data := X"4C";
+  when "01011110" => data := X"58";
+  when "01011111" => data := X"CF";
+  when "01100000" => data := X"D0";
+  when "01100001" => data := X"EF";
+  when "01100010" => data := X"AA";
+  when "01100011" => data := X"FB";
+  when "01100100" => data := X"43";
+  when "01100101" => data := X"4D";
+  when "01100110" => data := X"33";
+  when "01100111" => data := X"85";
+  when "01101000" => data := X"45";
+  when "01101001" => data := X"F9";
+  when "01101010" => data := X"02";
+  when "01101011" => data := X"7F";
+  when "01101100" => data := X"50";
+  when "01101101" => data := X"3C";
+  when "01101110" => data := X"9F";
+  when "01101111" => data := X"A8";
+  when "01110000" => data := X"51";
+  when "01110001" => data := X"A3";
+  when "01110010" => data := X"40";
+  when "01110011" => data := X"8F";
+  when "01110100" => data := X"92";
+  when "01110101" => data := X"9D";
+  when "01110110" => data := X"38";
+  when "01110111" => data := X"F5";
+  when "01111000" => data := X"BC";
+  when "01111001" => data := X"B6";
+  when "01111010" => data := X"DA";
+  when "01111011" => data := X"21";
+  when "01111100" => data := X"10";
+  when "01111101" => data := X"FF";
+  when "01111110" => data := X"F3";
+  when "01111111" => data := X"D2";
+  when "10000000" => data := X"CD";
+  when "10000001" => data := X"0C";
+  when "10000010" => data := X"13";
+  when "10000011" => data := X"EC";
+  when "10000100" => data := X"5F";
+  when "10000101" => data := X"97";
+  when "10000110" => data := X"44";
+  when "10000111" => data := X"17";
+  when "10001000" => data := X"C4";
+  when "10001001" => data := X"A7";
+  when "10001010" => data := X"7E";
+  when "10001011" => data := X"3D";
+  when "10001100" => data := X"64";
+  when "10001101" => data := X"5D";
+  when "10001110" => data := X"19";
+  when "10001111" => data := X"73";
+  when "10010000" => data := X"60";
+  when "10010001" => data := X"81";
+  when "10010010" => data := X"4F";
+  when "10010011" => data := X"DC";
+  when "10010100" => data := X"22";
+  when "10010101" => data := X"2A";
+  when "10010110" => data := X"90";
+  when "10010111" => data := X"88";
+  when "10011000" => data := X"46";
+  when "10011001" => data := X"EE";
+  when "10011010" => data := X"B8";
+  when "10011011" => data := X"14";
+  when "10011100" => data := X"DE";
+  when "10011101" => data := X"5E";
+  when "10011110" => data := X"0B";
+  when "10011111" => data := X"DB";
+  when "10100000" => data := X"E0";
+  when "10100001" => data := X"32";
+  when "10100010" => data := X"3A";
+  when "10100011" => data := X"0A";
+  when "10100100" => data := X"49";
+  when "10100101" => data := X"06";
+  when "10100110" => data := X"24";
+  when "10100111" => data := X"5C";
+  when "10101000" => data := X"C2";
+  when "10101001" => data := X"D3";
+  when "10101010" => data := X"AC";
+  when "10101011" => data := X"62";
+  when "10101100" => data := X"91";
+  when "10101101" => data := X"95";
+  when "10101110" => data := X"E4";
+  when "10101111" => data := X"79";
+  when "10110000" => data := X"E7";
+  when "10110001" => data := X"C8";
+  when "10110010" => data := X"37";
+  when "10110011" => data := X"6D";
+  when "10110100" => data := X"8D";
+  when "10110101" => data := X"D5";
+  when "10110110" => data := X"4E";
+  when "10110111" => data := X"A9";
+  when "10111000" => data := X"6C";
+  when "10111001" => data := X"56";
+  when "10111010" => data := X"F4";
+  when "10111011" => data := X"EA";
+  when "10111100" => data := X"65";
+  when "10111101" => data := X"7A";
+  when "10111110" => data := X"AE";
+  when "10111111" => data := X"08";
+  when "11000000" => data := X"BA";
+  when "11000001" => data := X"78";
+  when "11000010" => data := X"25";
+  when "11000011" => data := X"2E";
+  when "11000100" => data := X"1C";
+  when "11000101" => data := X"A6";
+  when "11000110" => data := X"B4";
+  when "11000111" => data := X"C6";
+  when "11001000" => data := X"E8";
+  when "11001001" => data := X"DD";
+  when "11001010" => data := X"74";
+  when "11001011" => data := X"1F";
+  when "11001100" => data := X"4B";
+  when "11001101" => data := X"BD";
+  when "11001110" => data := X"8B";
+  when "11001111" => data := X"8A";
+  when "11010000" => data := X"70";
+  when "11010001" => data := X"3E";
+  when "11010010" => data := X"B5";
+  when "11010011" => data := X"66";
+  when "11010100" => data := X"48";
+  when "11010101" => data := X"03";
+  when "11010110" => data := X"F6";
+  when "11010111" => data := X"0E";
+  when "11011000" => data := X"61";
+  when "11011001" => data := X"35";
+  when "11011010" => data := X"57";
+  when "11011011" => data := X"B9";
+  when "11011100" => data := X"86";
+  when "11011101" => data := X"C1";
+  when "11011110" => data := X"1D";
+  when "11011111" => data := X"9E";
+  when "11100000" => data := X"E1";
+  when "11100001" => data := X"F8";
+  when "11100010" => data := X"98";
+  when "11100011" => data := X"11";
+  when "11100100" => data := X"69";
+  when "11100101" => data := X"D9";
+  when "11100110" => data := X"8E";
+  when "11100111" => data := X"94";
+  when "11101000" => data := X"9B";
+  when "11101001" => data := X"1E";
+  when "11101010" => data := X"87";
+  when "11101011" => data := X"E9";
+  when "11101100" => data := X"CE";
+  when "11101101" => data := X"55";
+  when "11101110" => data := X"28";
+  when "11101111" => data := X"DF";
+  when "11110000" => data := X"8C";
+  when "11110001" => data := X"A1";
+  when "11110010" => data := X"89";
+  when "11110011" => data := X"0D";
+  when "11110100" => data := X"BF";
+  when "11110101" => data := X"E6";
+  when "11110110" => data := X"42";
+  when "11110111" => data := X"68";
+  when "11111000" => data := X"41";
+  when "11111001" => data := X"99";
+  when "11111010" => data := X"2D";
+  when "11111011" => data := X"0F";
+  when "11111100" => data := X"B0";
+  when "11111101" => data := X"54";
+  when "11111110" => data := X"BB";
+  when "11111111" => data := X"16";
+  when others => null;  
+end case;
+data_stdlogic := to_StdLogicVector(data);
+return data_stdlogic;
+end function sbox_val;
+
+
+function inv_sbox_val(address: std_logic_vector(7 downto 0)) return std_logic_vector is
+variable inv_data: bit_vector(7 downto 0);
+variable inv_data_stdlogic: std_logic_vector(7 downto 0);
+begin
+
+case address is
+
+  when "00000000" => inv_data := X"52";
+  when "00000001" => inv_data := X"09";
+  when "00000010" => inv_data := X"6a";
+  when "00000011" => inv_data := X"d5";
+  when "00000100" => inv_data := X"30";
+  when "00000101" => inv_data := X"36";
+  when "00000110" => inv_data := X"a5";
+  when "00000111" => inv_data := X"38";
+  when "00001000" => inv_data := X"bf";
+  when "00001001" => inv_data := X"40";
+  when "00001010" => inv_data := X"a3";
+  when "00001011" => inv_data := X"9e";
+  when "00001100" => inv_data := X"81";
+  when "00001101" => inv_data := X"f3";
+  when "00001110" => inv_data := X"d7";
+  when "00001111" => inv_data := X"fb";
+  when "00010000" => inv_data := X"7c";
+  when "00010001" => inv_data := X"e3";
+  when "00010010" => inv_data := X"39";
+  when "00010011" => inv_data := X"82";
+  when "00010100" => inv_data := X"9b";
+  when "00010101" => inv_data := X"2f";
+  when "00010110" => inv_data := X"ff";
+  when "00010111" => inv_data := X"87";
+  when "00011000" => inv_data := X"34";
+  when "00011001" => inv_data := X"8e";
+  when "00011010" => inv_data := X"43";
+  when "00011011" => inv_data := X"44";
+  when "00011100" => inv_data := X"c4";
+  when "00011101" => inv_data := X"de";
+  when "00011110" => inv_data := X"e9";
+  when "00011111" => inv_data := X"cb";
+  when "00100000" => inv_data := X"54";
+  when "00100001" => inv_data := X"7b";
+  when "00100010" => inv_data := X"94";
+  when "00100011" => inv_data := X"32";
+  when "00100100" => inv_data := X"a6";
+  when "00100101" => inv_data := X"c2";
+  when "00100110" => inv_data := X"23";
+  when "00100111" => inv_data := X"3d";
+  when "00101000" => inv_data := X"ee";
+  when "00101001" => inv_data := X"4c";
+  when "00101010" => inv_data := X"95";
+  when "00101011" => inv_data := X"0b";
+  when "00101100" => inv_data := X"42";
+  when "00101101" => inv_data := X"fa";
+  when "00101110" => inv_data := X"c3";
+  when "00101111" => inv_data := X"4e";
+  when "00110000" => inv_data := X"08";
+  when "00110001" => inv_data := X"2e";
+  when "00110010" => inv_data := X"a1";
+  when "00110011" => inv_data := X"66";
+  when "00110100" => inv_data := X"28";
+  when "00110101" => inv_data := X"d9";
+  when "00110110" => inv_data := X"24";
+  when "00110111" => inv_data := X"b2";
+  when "00111000" => inv_data := X"76";
+  when "00111001" => inv_data := X"5b";
+  when "00111010" => inv_data := X"a2";
+  when "00111011" => inv_data := X"49";
+  when "00111100" => inv_data := X"6d";
+  when "00111101" => inv_data := X"8b";
+  when "00111110" => inv_data := X"d1";
+  when "00111111" => inv_data := X"25";
+  when "01000000" => inv_data := X"72";
+  when "01000001" => inv_data := X"f8";
+  when "01000010" => inv_data := X"f6";
+  when "01000011" => inv_data := X"64";
+  when "01000100" => inv_data := X"86";
+  when "01000101" => inv_data := X"68";
+  when "01000110" => inv_data := X"98";
+  when "01000111" => inv_data := X"16";
+  when "01001000" => inv_data := X"d4";
+  when "01001001" => inv_data := X"a4";
+  when "01001010" => inv_data := X"5c";
+  when "01001011" => inv_data := X"cc";
+  when "01001100" => inv_data := X"5d";
+  when "01001101" => inv_data := X"65";
+  when "01001110" => inv_data := X"b6";
+  when "01001111" => inv_data := X"92";
+  when "01010000" => inv_data := X"6c";
+  when "01010001" => inv_data := X"70";
+  when "01010010" => inv_data := X"48";
+  when "01010011" => inv_data := X"50";
+  when "01010100" => inv_data := X"fd";
+  when "01010101" => inv_data := X"ed";
+  when "01010110" => inv_data := X"b9";
+  when "01010111" => inv_data := X"da";
+  when "01011000" => inv_data := X"5e";
+  when "01011001" => inv_data := X"15";
+  when "01011010" => inv_data := X"46";
+  when "01011011" => inv_data := X"57";
+  when "01011100" => inv_data := X"a7";
+  when "01011101" => inv_data := X"8d";
+  when "01011110" => inv_data := X"9d";
+  when "01011111" => inv_data := X"84";
+  when "01100000" => inv_data := X"90";
+  when "01100001" => inv_data := X"d8";
+  when "01100010" => inv_data := X"ab";
+  when "01100011" => inv_data := X"00";
+  when "01100100" => inv_data := X"8c";
+  when "01100101" => inv_data := X"bc";
+  when "01100110" => inv_data := X"d3";
+  when "01100111" => inv_data := X"0a";
+  when "01101000" => inv_data := X"f7";
+  when "01101001" => inv_data := X"e4";
+  when "01101010" => inv_data := X"58";
+  when "01101011" => inv_data := X"05";
+  when "01101100" => inv_data := X"b8";
+  when "01101101" => inv_data := X"b3";
+  when "01101110" => inv_data := X"45";
+  when "01101111" => inv_data := X"06";
+  when "01110000" => inv_data := X"d0";
+  when "01110001" => inv_data := X"2c";
+  when "01110010" => inv_data := X"1e";
+  when "01110011" => inv_data := X"8f";
+  when "01110100" => inv_data := X"ca";
+  when "01110101" => inv_data := X"3f";
+  when "01110110" => inv_data := X"0f";
+  when "01110111" => inv_data := X"02";
+  when "01111000" => inv_data := X"c1";
+  when "01111001" => inv_data := X"af";
+  when "01111010" => inv_data := X"bd";
+  when "01111011" => inv_data := X"03";
+  when "01111100" => inv_data := X"01";
+  when "01111101" => inv_data := X"13";
+  when "01111110" => inv_data := X"8a";
+  when "01111111" => inv_data := X"6b";
+  when "10000000" => inv_data := X"3a";
+  when "10000001" => inv_data := X"91";
+  when "10000010" => inv_data := X"11";
+  when "10000011" => inv_data := X"41";
+  when "10000100" => inv_data := X"4f";
+  when "10000101" => inv_data := X"67";
+  when "10000110" => inv_data := X"dc";
+  when "10000111" => inv_data := X"ea";
+  when "10001000" => inv_data := X"97";
+  when "10001001" => inv_data := X"f2";
+  when "10001010" => inv_data := X"cf";
+  when "10001011" => inv_data := X"ce";
+  when "10001100" => inv_data := X"f0";
+  when "10001101" => inv_data := X"b4";
+  when "10001110" => inv_data := X"e6";
+  when "10001111" => inv_data := X"73";
+  when "10010000" => inv_data := X"96";
+  when "10010001" => inv_data := X"ac";
+  when "10010010" => inv_data := X"74";
+  when "10010011" => inv_data := X"22";
+  when "10010100" => inv_data := X"e7";
+  when "10010101" => inv_data := X"ad";
+  when "10010110" => inv_data := X"35";
+  when "10010111" => inv_data := X"85";
+  when "10011000" => inv_data := X"e2";
+  when "10011001" => inv_data := X"f9";
+  when "10011010" => inv_data := X"37";
+  when "10011011" => inv_data := X"e8";
+  when "10011100" => inv_data := X"1c";
+  when "10011101" => inv_data := X"75";
+  when "10011110" => inv_data := X"df";
+  when "10011111" => inv_data := X"6e";
+  when "10100000" => inv_data := X"47";
+  when "10100001" => inv_data := X"f1";
+  when "10100010" => inv_data := X"1a";
+  when "10100011" => inv_data := X"71";
+  when "10100100" => inv_data := X"1d";
+  when "10100101" => inv_data := X"29";
+  when "10100110" => inv_data := X"c5";
+  when "10100111" => inv_data := X"89";
+  when "10101000" => inv_data := X"6f";
+  when "10101001" => inv_data := X"b7";
+  when "10101010" => inv_data := X"62";
+  when "10101011" => inv_data := X"0e";
+  when "10101100" => inv_data := X"aa";
+  when "10101101" => inv_data := X"18";
+  when "10101110" => inv_data := X"be";
+  when "10101111" => inv_data := X"1b";
+  when "10110000" => inv_data := X"fc";
+  when "10110001" => inv_data := X"56";
+  when "10110010" => inv_data := X"3e";
+  when "10110011" => inv_data := X"4b";
+  when "10110100" => inv_data := X"c6";
+  when "10110101" => inv_data := X"d2";
+  when "10110110" => inv_data := X"79";
+  when "10110111" => inv_data := X"20";
+  when "10111000" => inv_data := X"9a";
+  when "10111001" => inv_data := X"db";
+  when "10111010" => inv_data := X"c0";
+  when "10111011" => inv_data := X"fe";
+  when "10111100" => inv_data := X"78";
+  when "10111101" => inv_data := X"cd";
+  when "10111110" => inv_data := X"5a";
+  when "10111111" => inv_data := X"f4";
+  when "11000000" => inv_data := X"1f";
+  when "11000001" => inv_data := X"dd";
+  when "11000010" => inv_data := X"a8";
+  when "11000011" => inv_data := X"33";
+  when "11000100" => inv_data := X"88";
+  when "11000101" => inv_data := X"07";
+  when "11000110" => inv_data := X"c7";
+  when "11000111" => inv_data := X"31";
+  when "11001000" => inv_data := X"b1";
+  when "11001001" => inv_data := X"12";
+  when "11001010" => inv_data := X"10";
+  when "11001011" => inv_data := X"59";
+  when "11001100" => inv_data := X"27";
+  when "11001101" => inv_data := X"80";
+  when "11001110" => inv_data := X"ec";
+  when "11001111" => inv_data := X"5f";
+  when "11010000" => inv_data := X"60";
+  when "11010001" => inv_data := X"51";
+  when "11010010" => inv_data := X"7f";
+  when "11010011" => inv_data := X"a9";
+  when "11010100" => inv_data := X"19";
+  when "11010101" => inv_data := X"b5";
+  when "11010110" => inv_data := X"4a";
+  when "11010111" => inv_data := X"0d";
+  when "11011000" => inv_data := X"2d";
+  when "11011001" => inv_data := X"e5";
+  when "11011010" => inv_data := X"7a";
+  when "11011011" => inv_data := X"9f";
+  when "11011100" => inv_data := X"93";
+  when "11011101" => inv_data := X"c9";
+  when "11011110" => inv_data := X"9c";
+  when "11011111" => inv_data := X"ef";
+  when "11100000" => inv_data := X"a0";
+  when "11100001" => inv_data := X"e0";
+  when "11100010" => inv_data := X"3b";
+  when "11100011" => inv_data := X"4d";
+  when "11100100" => inv_data := X"ae";
+  when "11100101" => inv_data := X"2a";
+  when "11100110" => inv_data := X"f5";
+  when "11100111" => inv_data := X"b0";
+  when "11101000" => inv_data := X"c8";
+  when "11101001" => inv_data := X"eb";
+  when "11101010" => inv_data := X"bb";
+  when "11101011" => inv_data := X"3c";
+  when "11101100" => inv_data := X"83";
+  when "11101101" => inv_data := X"53";
+  when "11101110" => inv_data := X"99";
+  when "11101111" => inv_data := X"61";
+  when "11110000" => inv_data := X"17";
+  when "11110001" => inv_data := X"2b";
+  when "11110010" => inv_data := X"04";
+  when "11110011" => inv_data := X"7e";
+  when "11110100" => inv_data := X"ba";
+  when "11110101" => inv_data := X"77";
+  when "11110110" => inv_data := X"d6";
+  when "11110111" => inv_data := X"26";
+  when "11111000" => inv_data := X"e1";
+  when "11111001" => inv_data := X"69";
+  when "11111010" => inv_data := X"14";
+  when "11111011" => inv_data := X"63";
+  when "11111100" => inv_data := X"55";
+  when "11111101" => inv_data := X"21";
+  when "11111110" => inv_data := X"0c";
+  when "11111111" => inv_data := X"7d";
+  when others => null;  
+end case;
+inv_data_stdlogic := to_StdLogicVector(inv_data);
+return inv_data_stdlogic;
+end function inv_sbox_val;
+
+----Defining function col_transform
+
+function col_transform(p: state_array_type) return std_logic_vector is
+ variable result: std_logic_vector(7 downto 0);
+ variable m,n: std_logic_vector(7 downto 0);
+ 
+begin 
+   if(p(0)(7) = '1') then
+     m := (p(0)(6 downto 0) & '0') xor "00011011";
+   else
+     m := (p(0)(6 downto 0) & '0');
+   end if;
+   if(p(1)(7) = '1') then
+     n := (p(1)(6 downto 0) & '0') xor "00011011" xor p(1);
+   else
+     n := (p(1)(6 downto 0) & '0') xor p(1);
+   end if;
+   result := m xor n xor p(2) xor p(3);
+   return result;
+end function col_transform;
+
+
+function col_inv_transform(s: state_array_type) return std_logic_vector is
+
+variable result: std_logic_vector(7 downto 0);
+variable sub0,sub1,sub2,sub3: std_logic_vector(7 downto 0);
+variable x0,y0,z0: std_logic_vector(7 downto 0);
+variable x1,y1,z1: std_logic_vector(7 downto 0);
+variable x2,y2,z2: std_logic_vector(7 downto 0);
+variable x3,y3,z3: std_logic_vector(7 downto 0);
+begin
+  if(s(0)(7) = '1') then
+    x0 := (s(0)(6 downto 0) & '0') xor "00011011";
+  else
+    x0 := (s(0)(6 downto 0) & '0');
+  end if;
+  if(x0(7) = '1') then
+    y0 := (x0(6 downto 0) & '0') xor "00011011";
+  else
+    y0 := (x0(6 downto 0) & '0');
+  end if;
+  if(y0(7) = '1') then
+    z0 := (y0(6 downto 0) & '0') xor "00011011";
+  else
+    z0 := (y0(6 downto 0) & '0');
+  end if;
+  sub0 := (x0 xor y0 xor z0);----------
+
+  if(s(1)(7) = '1') then
+    x1 := (s(1)(6 downto 0) & '0') xor "00011011";
+  else
+    x1 := (s(1)(6 downto 0) & '0');
+  end if;
+  if(x1(7) = '1') then
+    y1 := (x1(6 downto 0) & '0') xor "00011011";
+  else
+    y1 := (x1(6 downto 0) & '0');
+  end if;
+  if(y1(7) = '1') then
+    z1 := (y1(6 downto 0) & '0') xor "00011011";
+  else
+    z1 := (y1(6 downto 0) & '0');
+  end if;
+  sub1 := (x1 xor z1 xor s(1));----------
+
+  if(s(2)(7) = '1') then
+    x2 := (s(2)(6 downto 0) & '0') xor "00011011";
+  else
+    x2 := (s(2)(6 downto 0) & '0');
+  end if;
+  if(x2(7) = '1') then
+    y2 := (x2(6 downto 0) & '0') xor "00011011";
+  else
+    y2 := (x2(6 downto 0) & '0');
+  end if;
+  if(y2(7) = '1') then
+    z2 := (y2(6 downto 0) & '0') xor "00011011";
+  else
+    z2 := (y2(6 downto 0) & '0');
+  end if;
+  sub2 := (y2 xor z2 xor s(2));----------
+
+  if(s(3)(7) = '1') then
+    x3 := (s(3)(6 downto 0) & '0') xor "00011011";
+  else
+    x3 := (s(3)(6 downto 0) & '0');
+  end if;
+  if(x3(7) = '1') then
+    y3 := (x3(6 downto 0) & '0') xor "00011011";
+  else
+    y3 := (x3(6 downto 0) & '0');
+  end if;
+  if(y3(7) = '1') then
+    z3 := (y3(6 downto 0) & '0') xor "00011011";
+  else
+    z3 := (y3(6 downto 0) & '0');
+  end if;
+  sub3 := (z3 xor s(3));----------
+  
+  result := sub0 xor sub1 xor sub2 xor sub3;
+  return result;
+end function col_inv_transform;
+
+-- combo logic for mix columns
+
+function mix_cols_routine
+     (
+       a_r0 :state_array_type;
+       a_r1 :state_array_type;
+       a_r2 :state_array_type;
+       a_r3 :state_array_type;
+       mode :std_logic
+     )
+return std_logic_vector is
+variable b      : std_logic_vector(0 to 127);
+variable b0     : state_array_type;
+variable b1     : state_array_type;
+variable b2     : state_array_type;
+variable b3     : state_array_type;
+-------------------------------------------------
+variable b_0_0  : std_logic_vector(7 downto 0);
+variable s_0_0  : state_array_type;
+--------------------------------------------------
+variable b_0_1  : std_logic_vector(7 downto 0);
+variable s_0_1  : state_array_type;
+--------------------------------------------------
+variable b_0_2  : std_logic_vector(7 downto 0);
+variable s_0_2  : state_array_type;
+----------------------------------------------
+variable b_0_3  : std_logic_vector(7 downto 0);
+variable s_0_3  : state_array_type;
+----------------------------------------------
+variable b_1_0  : std_logic_vector(7 downto 0);
+variable s_1_0  : state_array_type;
+----------------------------------------------
+variable b_1_1  : std_logic_vector(7 downto 0);
+variable s_1_1  : state_array_type;
+----------------------------------------------
+variable b_1_2  : std_logic_vector(7 downto 0);
+variable s_1_2  : state_array_type;
+----------------------------------------------
+variable b_1_3  : std_logic_vector(7 downto 0);
+variable s_1_3  : state_array_type;
+----------------------------------------------
+variable b_2_0  : std_logic_vector(7 downto 0);
+variable s_2_0  : state_array_type;
+----------------------------------------------
+variable b_2_1  : std_logic_vector(7 downto 0);
+variable s_2_1  : state_array_type;
+----------------------------------------------
+variable b_2_2  : std_logic_vector(7 downto 0);
+variable s_2_2  : state_array_type;
+----------------------------------------------
+variable b_2_3  : std_logic_vector(7 downto 0);
+variable s_2_3  : state_array_type;
+variable b_3_0  : std_logic_vector(7 downto 0);
+variable s_3_0  : state_array_type;
+----------------------------------------------
+variable b_3_1  : std_logic_vector(7 downto 0);
+variable s_3_1  : state_array_type;
+----------------------------------------------
+variable b_3_2  : std_logic_vector(7 downto 0);
+variable s_3_2  : state_array_type;
+----------------------------------------------
+variable b_3_3  : std_logic_vector(7 downto 0);
+variable s_3_3  : state_array_type;
+--------------------------------------------------
+begin
+if(mode = '0') then
+  s_0_0 := a_r0;
+  b_0_0 := col_transform(s_0_0);
+------------------------------------------------------
+  s_0_1 := a_r1;
+  b_0_1 := col_transform(s_0_1);
+------------------------------------------------------
+  s_0_2 := a_r2;
+  b_0_2 := col_transform(s_0_2);
+------------------------------------------------------
+  s_0_3 := a_r3;
+  b_0_3 := col_transform(s_0_3);
+--****************************************************************
+  s_1_0 := (a_r0(1),a_r0(2),a_r0(3),a_r0(0));
+  b_1_0 := col_transform(s_1_0);
+------------------------------------------------------
+  s_1_1 := (a_r1(1),a_r1(2),a_r1(3),a_r1(0));
+  b_1_1 := col_transform(s_1_1);
+------------------------------------------------------
+  s_1_2 := (a_r2(1),a_r2(2),a_r2(3),a_r2(0));
+  b_1_2 := col_transform(s_1_2);
+------------------------------------------------------
+  s_1_3 := (a_r3(1),a_r3(2),a_r3(3),a_r3(0));
+  b_1_3 := col_transform(s_1_3);
+--****************************************************************
+  s_2_0 := (a_r0(2),a_r0(3),a_r0(0),a_r0(1));
+  b_2_0 := col_transform(s_2_0);
+------------------------------------------------------
+  s_2_1 := (a_r1(2),a_r1(3),a_r1(0),a_r1(1));
+  b_2_1 := col_transform(s_2_1);
+------------------------------------------------------
+  s_2_2 := (a_r2(2),a_r2(3),a_r2(0),a_r2(1));
+  b_2_2 := col_transform(s_2_2);
+------------------------------------------------------
+  s_2_3 := (a_r3(2),a_r3(3),a_r3(0),a_r3(1));
+  b_2_3 := col_transform(s_2_3);
+--****************************************************************
+  s_3_0 := (a_r0(3),a_r0(0),a_r0(1),a_r0(2));
+  b_3_0 := col_transform(s_3_0);
+------------------------------------------------------
+  s_3_1 := (a_r1(3),a_r1(0),a_r1(1),a_r1(2));
+  b_3_1 := col_transform(s_3_1);
+
+  s_3_2 := (a_r2(3),a_r2(0),a_r2(1),a_r2(2));
+  b_3_2 := col_transform(s_3_2);
+------------------------------------------------------
+  s_3_3 := (a_r3(3),a_r3(0),a_r3(1),a_r3(2));
+  b_3_3 := col_transform(s_3_3);
+--****************************************************************
+else       
+  s_0_0 := a_r0;
+  b_0_0 := col_inv_transform(s_0_0);
+------------------------------------------------------
+  s_0_1 := a_r1;
+  b_0_1 := col_inv_transform(s_0_1);
+------------------------------------------------------
+  s_0_2 := a_r2;
+  b_0_2 := col_inv_transform(s_0_2);
+------------------------------------------------------
+  s_0_3 := a_r3;
+  b_0_3 := col_inv_transform(s_0_3);
+--****************************************************************
+  s_1_0 := (a_r0(1),a_r0(2),a_r0(3),a_r0(0));
+  b_1_0 := col_inv_transform(s_1_0);
+------------------------------------------------------
+  s_1_1 := (a_r1(1),a_r1(2),a_r1(3),a_r1(0));
+  b_1_1 := col_inv_transform(s_1_1);
+------------------------------------------------------
+  s_1_2 := (a_r2(1),a_r2(2),a_r2(3),a_r2(0));
+  b_1_2 := col_inv_transform(s_1_2);
+------------------------------------------------------
+  s_1_3 := (a_r3(1),a_r3(2),a_r3(3),a_r3(0));
+  b_1_3 := col_inv_transform(s_1_3);
+-------------------------------------------------------
+  s_2_0 := (a_r0(2),a_r0(3),a_r0(0),a_r0(1));
+  b_2_0 := col_inv_transform(s_2_0);
+------------------------------------------------------
+  s_2_1 := (a_r1(2),a_r1(3),a_r1(0),a_r1(1));
+  b_2_1 := col_inv_transform(s_2_1);
+------------------------------------------------------
+  s_2_2 := (a_r2(2),a_r2(3),a_r2(0),a_r2(1));
+  b_2_2 := col_inv_transform(s_2_2);
+------------------------------------------------------
+  s_2_3 := (a_r3(2),a_r3(3),a_r3(0),a_r3(1));
+  b_2_3 := col_inv_transform(s_2_3);
+-------------------------------------------------------
+  s_3_0 := (a_r0(3),a_r0(0),a_r0(1),a_r0(2));
+  b_3_0 := col_inv_transform(s_3_0);
+------------------------------------------------------
+  s_3_1 := (a_r1(3),a_r1(0),a_r1(1),a_r1(2));
+  b_3_1 := col_inv_transform(s_3_1);
+------------------------------------------------------
+  s_3_2 := (a_r2(3),a_r2(0),a_r2(1),a_r2(2));
+  b_3_2 := col_inv_transform(s_3_2);
+------------------------------------------------------
+  s_3_3 := (a_r3(3),a_r3(0),a_r3(1),a_r3(2));
+  b_3_3 := col_inv_transform(s_3_3);
+end if;
+
+b := (b_0_0 & b_1_0 & b_2_0 & b_3_0 & b_0_1 & b_1_1 & b_2_1 & b_3_1 &
+      b_0_2 & b_1_2 & b_2_2 & b_3_2 & b_0_3 & b_1_3 & b_2_3 & b_3_3);
+return b;
+end function mix_cols_routine;
+
+end package body aes_package;
+
+---Key Expander Code
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_unsigned.all;
+use work.aes_package.all;
+
+entity key_expander is
+	port(
+		clk      : in std_logic;
+		reset    : in std_logic;
+		key_in_c0: in state_array_type; 
+		key_in_c1: in state_array_type; 
+		key_in_c2: in state_array_type; 
+		key_in_c3: in state_array_type; 
+		count    : in integer;      
+		mode     : in std_logic;        -- high=encrypt, low=decrypt
+		keyout_c0: out state_array_type;
+		keyout_c1: out state_array_type;
+		keyout_c2: out state_array_type;
+		keyout_c3: out state_array_type ;
+		);
+end key_expander;
+
+architecture expansion of key_expander is
+	signal X0      : state_array_type;
+	signal X1      : state_array_type;
+	signal X2      : state_array_type;
+	signal X3      : state_array_type;
+	signal w_i_nk0 : state_array_type;
+	signal w_i_nk1 : state_array_type;
+	signal w_i_nk2 : state_array_type;
+	signal w_i_nk3 : state_array_type;
+	signal temp0   : state_array_type;
+	signal k_rot   : state_array_type;
+	signal key_sub : state_array_type;
+	signal key_xor_rcon: state_array_type;
+	signal rcon: std_logic_vector(7 downto 0);
+begin
+	
+-- Transformation of keys
+process(mode,rcon,temp0,k_rot,key_sub,key_xor_rcon,X0,X1,X2,X3,w_i_nk0,w_i_nk1,w_i_nk2,w_i_nk)
+	 begin
+		if(mode = '1') then -- if encrypt
+			k_rot <= (temp0(1),temp0(2),temp0(3),temp0(0)); -- Rotate Word
+			
+                               
+    -- SUB word
+			key_sub(0) <= sbox_val(k_rot(0));
+			key_sub(1) <= sbox_val(k_rot(1));
+			key_sub(2) <= sbox_val(k_rot(2));
+			key_sub(3) <= sbox_val(k_rot(3));
+			
+-- XOR with rcon
+key_xor_rcon <= ((key_sub(0) xor rcon),key_sub(1),key_sub(2),key_sub(3));
+			
+-- XOR with Wi's
+X0 <= ( key_xor_rcon(0) xor w_i_nk0(0) ,key_xor_rcon(1) xor w_i_nk0(1),key_xor_rcon(2) xor w_i_nk0(2),key_xor_rcon(3) xor w_i_nk0(3));
+			
+X1 <= ((X0(0) xor w_i_nk1(0)) , (X0(1) xor w_i_nk1(1)) , (X0(2) xor w_i_nk1(2)) , (X0(3) xor w_i_nk1(3)));
+			
+X2 <= ((X1(0) xor w_i_nk2(0)) , (X1(1) xor w_i_nk2(1)) , (X1(2) xor w_i_nk2(2)) , (X1(3) xor w_i_nk2(3)));
+			
+X3 <= ((X2(0) xor w_i_nk3(0)) , (X2(1) xor w_i_nk3(1)) , (X2(2) xor w_i_nk3(2)) , (X2(3) xor w_i_nk3(3)));
+		
+			
+X3 <= (w_i_nk3(0) xor w_i_nk2(0) , w_i_nk3(1) xor w_i_nk2(1) , w_i_nk3(2) xor w_i_nk2(2) , w_i_nk3(3) xor w_i_nk2(3));
+			
+X2 <= (w_i_nk2(0) xor w_i_nk1(0) , w_i_nk2(1) xor w_i_nk1(1) , w_i_nk2(2) xor w_i_nk1(2) , w_i_nk2(3) xor w_i_nk1(3));
+			
+X1 <= (w_i_nk1(0) xor w_i_nk0(0) , w_i_nk1(1) xor w_i_nk0(1) , w_i_nk1(2) xor w_i_nk0(2) , w_i_nk1(3) xor w_i_nk0(3));
+			
+X0 <= ( key_xor_rcon(0) xor w_i_nk0(0) ,key_xor_rcon(1) xor w_i_nk0(1),key_xor_rcon(2) xor w_i_nk0(2),key_xor_rcon(3) xor w_i_nk0(3));
+			
+			k_rot <= (X3(1),X3(2),X3(3),X3(0));
+			key_sub(0) <= sbox_val(k_rot(0));
+			key_sub(1) <= sbox_val(k_rot(1));
+			key_sub(2) <= sbox_val(k_rot(2));
+			key_sub(3) <= sbox_val(k_rot(3));
+			
+key_xor_rcon <= ((key_sub(0) xor rcon),key_sub(1),key_sub(2),key_sub(3));
+	     end if;
+	end process;  
+	
+-- Registering key outputs for each round and generating rcon values for each round
+	
+process(clk,reset)
+	begin
+		if(reset = '0') then
+			temp0   <= (others =>(others => '0'));
+			w_i_nk0 <= (others =>(others => '0'));
+			w_i_nk1 <= (others =>(others => '0'));
+			w_i_nk2 <= (others =>(others => '0'));
+			w_i_nk3 <= (others =>(others => '0'));
+			rcon    <= (others => '0');
+		elsif clk'event and clk = '1' then
+			if(count = 0) then
+				temp0   <= key_in_c3;
+				w_i_nk0 <= key_in_c0;
+				w_i_nk1 <= key_in_c1;
+				w_i_nk2 <= key_in_c2;
+				w_i_nk3 <= key_in_c3;
+			else
+				temp0   <= X3;
+				w_i_nk0 <= X0;
+				w_i_nk1 <= X1;
+				w_i_nk2 <= X2;
+				w_i_nk3 <= X3;
+			end if;
+			if(mode = '1') then
+				case count is
+					when 0 => rcon <= "00000001";
+					when 1 => rcon <= "00000010";
+					when 2 => rcon <= "00000100";
+					when 3 => rcon <= "00001000";
+					when 4 => rcon <= "00010000";
+					when 5 => rcon <= "00100000";
+					when 6 => rcon <= "01000000";
+					when 7 => rcon <= "10000000";
+					when 8 => rcon <= "00011011";
+					when 9 => rcon <= "00110110";
+					when others => rcon <= "00000000";
+				end case; 
+			
+else------------------------->>>>>>>>>>>>>>
+				case count is
+					when 0 => rcon <= "00110110";
+					when 1 => rcon <= "00011011";
+					when 2 => rcon <= "10000000";
+					when 3 => rcon <= "01000000";
+					when 4 => rcon <= "00100000";
+					when 5 => rcon <= "00010000";
+					when 6 => rcon <= "00001000";
+					when 7 => rcon <= "00000100";
+					when 8 => rcon <= "00000010";
+					when 9 => rcon <= "00000001";
+					when others => rcon <= "00000000";
+				end case;   
+			end if;  
+		end if;
+	end process;  
+	keyout_c0 <= X0;    
+	Keyout_c1 <= X1;   
+	keyout_c2 <= X2;
+	keyout_c3 <= X3;     
+end expansion;
+
+
+-- AES 128’s ECB Code for Encryption
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_unsigned.all;
+use work.aes_package.all;
+
+entity aes128_fast1 is
+	GENERIC (MODE:STD_LOGIC:='1'); -- For Encryption
+port(
+      clk       : in std_logic;
+      reset     : in std_logic;
+      start     : in std_logic; -- to initiate the encryption/decryption process after loading
+     -- mode      : in std_logic; -- to select encryption or decryption
+      load      : in std_logic; -- to load the input and keys. 
+      key       : in std_logic_vector(127 downto 0);
+      data_in   : in std_logic_vector(127 downto 0);
+      data_out  : out std_logic_vector(127 downto 0);
+      done      : out std_logic
+     );
+     
+end aes128_fast1;
+
+architecture mapping of aes128_fast1 is
+
+component key_expander 
+port(
+      clk      : in std_logic;
+      reset    : in std_logic;
+      key_in_c0: in state_array_type;
+      key_in_c1: in state_array_type;
+      key_in_c2: in state_array_type;
+      key_in_c3: in state_array_type;
+      count    : in integer;
+      mode     : in std_logic;
+      keyout_c0: out state_array_type;
+      keyout_c1: out state_array_type;
+      keyout_c2: out state_array_type;
+      keyout_c3: out state_array_type
+      );
+end component;
+
+signal data_in_reg0: state_array_type;
+signal data_in_reg1: state_array_type;
+signal data_in_reg2: state_array_type;
+signal data_in_reg3: state_array_type;
+signal key_reg0: state_array_type;
+signal key_reg1: state_array_type;
+signal key_reg2: state_array_type;
+signal key_reg3: state_array_type;
+signal s0      : state_array_type;
+signal s1      : state_array_type;
+signal s2      : state_array_type;
+signal s3      : state_array_type;
+signal s_00    : state_array_type;
+signal s_01    : state_array_type;
+signal s_02    : state_array_type;
+signal s_03    : state_array_type;
+signal r_00    : state_array_type;
+signal r_01    : state_array_type;
+signal r_02    : state_array_type;
+signal r_03    : state_array_type;
+
+signal load_d1 : std_logic;
+signal start_d1: std_logic;
+signal start_d2: std_logic;
+signal round_cnt: integer range 0 to 15;
+signal flag_cnt: std_logic;
+signal done_d1 : std_logic;
+signal done_d2 : std_logic;
+
+signal mixcol_0: state_array_type;
+signal mixcol_1: state_array_type;
+signal mixcol_2: state_array_type;
+signal mixcol_3: state_array_type;
+
+signal new_key0: state_array_type;
+signal new_key1: state_array_type;
+signal new_key2: state_array_type;
+signal new_key3: state_array_type;
+signal new_key0_d1: state_array_type;
+signal new_key1_d1: state_array_type;
+signal new_key2_d1: state_array_type;
+signal new_key3_d1: state_array_type;
+
+signal s0_buf  : state_array_type;
+signal s1_buf  : state_array_type;
+signal s2_buf  : state_array_type;
+signal s3_buf  : state_array_type;
+
+signal next_round_data_0: state_array_type;
+signal next_round_data_1: state_array_type;
+signal next_round_data_2: state_array_type;
+signal next_round_data_3: state_array_type;
+
+signal pr_data_0: state_array_type;
+signal pr_data_1: state_array_type;
+signal pr_data_2: state_array_type;
+signal pr_data_3: state_array_type;
+
+signal key_out10   : std_logic_vector(0 to 127);
+signal mix_col_array   : std_logic_vector(0 to 127);
+signal mixcol_key_array: std_logic_vector(0 to 127);
+signal mixcol_key_0    : state_array_type;
+signal mixcol_key_1    : state_array_type;
+signal mixcol_key_2    : state_array_type;
+signal mixcol_key_3    : state_array_type;
+signal key_select_0    : state_array_type;
+signal key_select_1    : state_array_type;
+signal key_select_2    : state_array_type;
+signal key_select_3    : state_array_type;
+
+signal done_d2_delay1 ,done_d2_delay2:std_logic;
+begin
+
+-- Loading the data and keys
+
+process(clk,reset)
+begin
+  if(reset = '0') then
+    key_reg0 <= (others =>(others => '0'));
+    key_reg1 <= (others =>(others => '0'));
+    key_reg2 <= (others =>(others => '0'));
+    key_reg3 <= (others =>(others => '0'));
+    data_in_reg0 <= (others =>(others => '0'));
+    data_in_reg1 <= (others =>(others => '0'));
+    data_in_reg2 <= (others =>(others => '0'));
+    data_in_reg3 <= (others =>(others => '0'));
+  
+elsif rising_edge(clk) then
+  
+ if(load = '1' and load_d1 = '0') then
+      
+key_reg0     <= (key(127 downto 120),key(119 downto 112),key(111 downto 104),key(103 downto 96));
+key_reg1     <= (key(95 downto 88),key(87 downto 80),key(79 downto 72),key(71 downto 64));        
+key_reg2     <= (key(63 downto 56),key(55 downto 48),key(47 downto 40),key(39 downto 32));
+ key_reg3     <= (key(31 downto 24),key(23 downto 16),key(15 downto 8),key(7 downto 0));
+	  
+data_in_reg0 <= (data_in(127 downto 120),data_in(119 downto 112),data_in(111 downto 104),data_in(103 downto 96));
+ data_in_reg1 <= (data_in(95 downto 88),data_in(87 downto 80),data_in(79 downto 72),data_in(71 downto 64));
+ data_in_reg2 <= (data_in(63 downto 56),data_in(55 downto 48),data_in(47 downto 40),data_in(39 downto 32));
+data_in_reg3 <= (data_in(31 downto 24),data_in(23 downto 16),data_in(15 downto 8),data_in(7downto0));   
+   end if;
+  end if;
+end process;
+
+----------STATE MATRIX ROW WORDS ------
+-- Given input xored with given key for generating input to the first round
+
+s0(0) <= data_in_reg0(0) xor key_reg0(0);
+s0(1) <= data_in_reg0(1) xor key_reg0(1);
+s0(2) <= data_in_reg0(2) xor key_reg0(2);
+s0(3) <= data_in_reg0(3) xor key_reg0(3);
+s1(0) <= data_in_reg1(0) xor key_reg1(0);
+s1(1) <= data_in_reg1(1) xor key_reg1(1);
+s1(2) <= data_in_reg1(2) xor key_reg1(2);
+s1(3) <= data_in_reg1(3) xor key_reg1(3);
+s2(0) <= data_in_reg2(0) xor key_reg2(0); 
+s2(1) <= data_in_reg2(1) xor key_reg2(1);
+s2(2) <= data_in_reg2(2) xor key_reg2(2);
+s2(3) <= data_in_reg2(3) xor key_reg2(3);
+s3(0) <= data_in_reg3(0) xor key_reg3(0);
+s3(1) <= data_in_reg3(1) xor key_reg3(1);
+s3(2) <= data_in_reg3(2) xor key_reg3(2);
+s3(3) <= data_in_reg3(3) xor key_reg3(3);
+
+
+-----------------SUB BYTES TRANSFORMATION--------------------------------------
+
+process(s0_buf,s1_buf,s2_buf,s3_buf)
+begin
+  if(mode = '1') then
+    s_00(0) <= sbox_val(s0_buf(0));
+    s_00(1) <= sbox_val(s0_buf(1));
+    s_00(2) <= sbox_val(s0_buf(2));
+    s_00(3) <= sbox_val(s0_buf(3));
+    
+    s_01(0) <= sbox_val(s1_buf(0));
+    s_01(1) <= sbox_val(s1_buf(1));
+    s_01(2) <= sbox_val(s1_buf(2));
+    s_01(3) <= sbox_val(s1_buf(3));
+    
+    s_02(0) <= sbox_val(s2_buf(0));
+    s_02(1) <= sbox_val(s2_buf(1));
+    s_02(2) <= sbox_val(s2_buf(2));
+    s_02(3) <= sbox_val(s2_buf(3));
+    
+    s_03(0) <= sbox_val(s3_buf(0));
+    s_03(1) <= sbox_val(s3_buf(1));
+    s_03(2) <= sbox_val(s3_buf(2));
+    s_03(3) <= sbox_val(s3_buf(3));
+  
+else
+    s_00(0) <= inv_sbox_val(s0_buf(0));
+    s_00(1) <= inv_sbox_val(s0_buf(1));
+    s_00(2) <= inv_sbox_val(s0_buf(2));
+    s_00(3) <= inv_sbox_val(s0_buf(3));
+    
+    s_01(0) <= inv_sbox_val(s1_buf(0));
+    s_01(1) <= inv_sbox_val(s1_buf(1));
+    s_01(2) <= inv_sbox_val(s1_buf(2));
+    s_01(3) <= inv_sbox_val(s1_buf(3));
+    
+    s_02(0) <= inv_sbox_val(s2_buf(0));
+    s_02(1) <= inv_sbox_val(s2_buf(1));
+    s_02(2) <= inv_sbox_val(s2_buf(2));
+    s_02(3) <= inv_sbox_val(s2_buf(3));
+    
+    s_03(0) <= inv_sbox_val(s3_buf(0));
+    s_03(1) <= inv_sbox_val(s3_buf(1));
+    s_03(2) <= inv_sbox_val(s3_buf(2));
+    s_03(3) <= inv_sbox_val(s3_buf(3));
+  end if;
+end process;  
+
+-----------SHIFT ROWS TRANSFORMATION--------------------------------------
+
+process(s_00,s_01,s_02,s_03)
+begin
+  if(mode = '1') then
+    r_00 <= (s_00(0),s_01(1),s_02(2),s_03(3));
+    r_01 <= (s_01(0),s_02(1),s_03(2),s_00(3));
+    r_02 <= (s_02(0),s_03(1),s_00(2),s_01(3));
+    r_03 <= (s_03(0),s_00(1),s_01(2),s_02(3));
+  else
+    r_00 <= (s_00(0),s_03(1),s_02(2),s_01(3)); 
+    r_01 <= (s_01(0),s_00(1),s_03(2),s_02(3)); 
+    r_02 <= (s_02(0),s_01(1),s_00(2),s_03(3)); 
+    r_03 <= (s_03(0),s_02(1),s_01(2),s_00(3)); 
+  end if;
+end process;  
+
+-----------MIX COLUMNS TRANSFORMATION--------------------------------------        
+
+mix_col_array <= mix_cols_routine(r_00,r_01,r_02,r_03,mode);
+mixcol_0 <= (mix_col_array(0 to 7),mix_col_array(8 to 15),mix_col_array(16 to 23),mix_col_array(24 to 31));
+mixcol_1 <= (mix_col_array(32 to 39),mix_col_array(40 to 47),mix_col_array(48 to 55),mix_col_array(56 to 63));
+mixcol_2 <= (mix_col_array(64 to 71),mix_col_array(72 to 79),mix_col_array(80 to 87),mix_col_array(88 to 95));
+mixcol_3 <= (mix_col_array(96 to 103),mix_col_array(104 to 111),mix_col_array(112 to 119),mix_col_array(120 to 127));
+
+mixcol_key_array <= mix_cols_routine(new_key0_d1,new_key1_d1,new_key2_d1,new_key3_d1,mode);
+mixcol_key_0 <= (mixcol_key_array(0 to 7),mixcol_key_array(8 to 15),mixcol_key_array(16 to 23),mixcol_key_array(24 to 31));
+mixcol_key_1 <= (mixcol_key_array(32 to 39),mixcol_key_array(40 to 47),mixcol_key_array(48 to 55),mixcol_key_array(56 to 63));
+mixcol_key_2 <= (mixcol_key_array(64 to 71),mixcol_key_array(72 to 79),mixcol_key_array(80 to 87),mixcol_key_array(88 to 95));
+mixcol_key_3 <= (mixcol_key_array(96 to 103),mixcol_key_array(104 to 111),mixcol_key_array(112 to 119),mixcol_key_array(120 to 127));
+
+---------ADD ROUND KEY STEP-------------------------------------------------
+
+expand_key:  key_expander 
+             port map(
+                          clk       => clk,
+                          reset     => reset,
+                          key_in_c0 => key_reg0,
+                          key_in_c1 => key_reg1,
+                          key_in_c2 => key_reg2,
+                          key_in_c3 => key_reg3,
+                          count     => round_cnt,
+                          mode      => mode,
+                          keyout_c0 => new_key0,
+                          keyout_c1 => new_key1,
+                          keyout_c2 => new_key2,
+                          keyout_c3 => new_key3  );
+
+---- Registered to increase speed
+
+process(clk,reset
+begin
+  if(reset = '0') then
+    new_key0_d1 <= (others =>(others => '0'));
+    new_key1_d1 <= (others =>(others => '0'));
+    new_key2_d1 <= (others =>(others => '0'));
+    new_key3_d1 <= (others =>(others => '0'));
+  elsif rising_edge(clk) then  
+    new_key0_d1 <= new_key0;
+    new_key1_d1 <= new_key1;
+    new_key2_d1 <= new_key2;
+    new_key3_d1 <= new_key3;
+  end if;
+end process;
+
+-- Previous round output as input to next round
+
+next_round_data_0 <= (pr_data_0(0) xor key_select_0(0),pr_data_0(1) xor key_select_0(1),pr_data_0(2) xor key_select_0(2),pr_data_0(3) xor key_select_0(3)); 
+
+next_round_data_1 <= (pr_data_1(0) xor key_select_1(0),pr_data_1(1) xor key_select_1(1),pr_data_1(2) xor key_select_1(2),pr_data_1(3) xor key_select_1(3));  
+
+next_round_data_2 <= (pr_data_2(0) xor key_select_2(0),pr_data_2(1) xor key_select_2(1),pr_data_2(2) xor key_select_2(2),pr_data_2(3) xor key_select_2(3));  
+
+next_round_data_3 <= (pr_data_3(0) xor key_select_3(0),pr_data_3(1) xor key_select_3(1),pr_data_3(2) xor key_select_3(2),pr_data_3(3) xor key_select_3(3));  
+
+-- Muxing for choosing data for the last round
+
+pr_data_0 <= r_00 when round_cnt=11 else
+             mixcol_0;
+pr_data_1 <= r_01 when round_cnt=11 else
+             mixcol_1;
+pr_data_2 <= r_02 when round_cnt=11 else
+             mixcol_2;
+
+pr_data_3 <= r_03 when round_cnt=11 else
+             mixcol_3;
+             
+key_select_0 <= new_key0_d1 when (mode = '1') else
+                mixcol_key_0 when(mode = '0' and round_cnt < 11) else
+                new_key0_d1;
+key_select_1 <= new_key1_d1 when (mode = '1') else
+                mixcol_key_1 when(mode = '0' and round_cnt < 11) else
+                new_key1_d1;
+key_select_2 <= new_key2_d1 when (mode = '1') else
+                mixcol_key_2 when(mode = '0' and round_cnt < 11) else
+                new_key2_d1;
+key_select_3 <= new_key3_d1 when (mode = '1') else
+                mixcol_key_3 when(mode = '0' and round_cnt < 11) else
+                new_key3_d1;
+
+process(clk,done_d2)
+	begin
+		if rising_edge(clk) then
+			done_d2_delay1<=done_d2;
+		end if;
+	end process;  
+	
+process(clk,done_d2_delay1)
+	begin
+		if rising_edge(clk) then
+			done_d2_delay2<=done_d2_delay1;
+		end if;
+	end process;   
+done<= done_d2 and not(done_d2_delay2);
+
+-- Registering start and load             
+
+process(clk,reset)
+begin
+  if(reset = '0') then
+    load_d1  <= '0';
+    start_d1 <= '0';
+    start_d2 <= '0';
+  elsif rising_edge(clk) then
+    load_d1  <= load;
+    start_d1 <= start;
+    start_d2 <= start_d1;
+  end if;
+end process;  
+
+-- Register outputs at end of each round
+
+process(clk,reset)
+begin
+  if(reset = '0') then
+    s0_buf <= (others =>(others => '0'));
+    s1_buf <= (others =>(others => '0'));
+    s2_buf <= (others =>(others => '0'));
+    s3_buf <= (others =>(others => '0'));
+  elsif rising_edge(clk) then
+    if(round_cnt = 0 or round_cnt = 1) then
+      s0_buf <= s0;
+      s1_buf <= s1;
+      s2_buf <= s2;
+      s3_buf <= s3;
+    else
+      s0_buf <= next_round_data_0;
+      s1_buf <= next_round_data_1;
+      s2_buf <= next_round_data_2;
+      s3_buf <= next_round_data_3;
+    end if;
+  end if;  
+end process;  
+
+-- Initiator process
+
+process(clk,reset)
+begin
+  if(reset = '0') then
+    round_cnt <= 0;
+    flag_cnt <= '0';
+  elsif rising_edge(clk) then
+    if((start_d2 = '1' and start_d1 = '0') or flag_cnt = '1') then
+      if(round_cnt < 11 or load=’1’) then
+        round_cnt <= round_cnt + 1;
+        flag_cnt <= '1';
+      else  
+        round_cnt <= 0;
+        flag_cnt <= '0';
+      end if;  
+    end if;
+  end if;  
+end process;  
+
+
+
+-- Completion signalling process
+
+process(clk,reset)
+begin
+  if(reset = '0') then
+    done_d1 <= '0';
+    done_d2 <= '0';
+  elsif rising_edge(clk) then
+    if(start_d2 = '1' and start_d1 = '0') then
+      done_d1 <= '0';
+      done_d2 <= '0';
+    elsif(round_cnt <11) then
+      done_d1 <= '1';
+    end if;  
+    done_d2 <= done_d1;
+  end if;
+end process;  
+
+-- Output assignment process        
+
+process(clk,reset)
+begin
+  if(reset= '0') then
+    data_out <= (others => '0');
+  elsif rising_edge(clk) then  
+    if(done_d1 = '1' and done_d2 = '0' or load_d1=1) then
+        data_out <= (next_round_data_0(0) & next_round_data_0(1) & next_round_data_0(2) & next_round_data_0(3) &
+                     next_round_data_1(0) & next_round_data_1(1) & next_round_data_1(2) & next_round_data_1(3) &
+                     next_round_data_2(0) & next_round_data_2(1) & next_round_data_2(2) & next_round_data_2(3) &
+                     next_round_data_3(0) & next_round_data_3(1) & next_round_data_3(2) & next_round_data_3(3));
+    end if;
+  end if;
+end process;
+
+ process  (round_cnt,new_key0_d1, new_key1_d1, new_key2_d1, new_key3_d1)
+begin  
+	if round_cnt = 11  then 
+		
+         key_out10  <= new_key0_d1(0) & new_key1_d1(1)& new_key2_d1(2) & new_key3_d1(3)&   new_key1_d1(0) & new_key1_d1(1)& new_key2_d1(2) & new_key3_d1(3)& new_key2_d1(0) & new_key1_d1(1)& new_key2_d1(2) & new_key3_d1(3)& new_key3_d1(0) & new_key1_d1(1)& new_key2_d1(2) & new_key3_d1(3); 
+          
+                 end  if;	
+     end  process;
+end mapping;
+
+--AES 128’s ECB Code for Decryption
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_unsigned.all;
+use WORK.aes_package.all;
+
+entity aes128_fast2 is
+	GENERIC (MODE:STD_LOGIC:='0'); --For Decryption
+port(
+      clk       : in std_logic;
+      reset     : in std_logic;		
+	   start_key	: in std_logic;
+      start     : in std_logic; -- to initiate the encryption/decryption process after loading
+     -- mode      : in std_logic; -- to select encryption or decryption
+      load      : in std_logic; -- to load the input and keys. 
+      key       : in std_logic_vector(127 downto 0);
+	 -- key_out   :out std_logic_vector(127 downto 0);
+      data_in   : in std_logic_vector(127 downto 0);
+      data_out  : out std_logic_vector(127 downto 0);
+      done      : out std_logic	 
+
+     );
+     
+end aes128_fast2;
+
+architecture mapping of aes128_fast2 is
+
+component key_expander 
+port(
+      clk      : in std_logic;
+      reset    : in std_logic;
+      key_in_c0: in state_array_type;
+      key_in_c1: in state_array_type;
+      key_in_c2: in state_array_type;
+      key_in_c3: in state_array_type;
+      count    : in integer;
+      mode     : in std_logic;
+      keyout_c0: out state_array_type;
+      keyout_c1: out state_array_type;
+      keyout_c2: out state_array_type;
+      keyout_c3: out state_array_type
+      );
+end component;
+
+signal data_in_reg0: state_array_type;
+signal data_in_reg1: state_array_type;
+signal data_in_reg2: state_array_type;
+signal data_in_reg3: state_array_type;
+signal key_reg0: state_array_type;
+signal key_reg1: state_array_type;
+signal key_reg2: state_array_type;
+signal key_reg3: state_array_type;
+signal s0      : state_array_type;
+signal s1      : state_array_type;
+signal s2      : state_array_type;
+signal s3      : state_array_type;
+signal s_00    : state_array_type;
+signal s_01    : state_array_type;
+signal s_02    : state_array_type;
+signal s_03    : state_array_type;
+signal r_00    : state_array_type;
+signal r_01    : state_array_type;
+signal r_02    : state_array_type;
+signal r_03    : state_array_type;
+signal load_d1 : std_logic;
+signal start_d1: std_logic;
+signal start_d2: std_logic;	  
+
+----------
+signal flag_cnt_key:std_logic;
+signal start_d1_key : std_logic;
+signal start_d2_key  : std_logic;
+signal round_cnt_key:  integer range 0 to 15; 	
+signal dec_key:std_logic_vector(127 downto 0);	
+
+signal primekey_reg0: state_array_type;
+signal primekey_reg1: state_array_type;
+signal primekey_reg2: state_array_type;
+signal primekey_reg3: state_array_type;
+
+---------
+signal round_cnt: integer range 0 to 15;  
+ 
+signal flag_cnt: std_logic;
+signal done_d1 : std_logic;
+signal done_d2 : std_logic;
+
+signal mixcol_0: state_array_type;
+signal mixcol_1: state_array_type;
+signal mixcol_2: state_array_type;
+signal mixcol_3: state_array_type;
+
+signal new_key0: state_array_type;
+signal new_key1: state_array_type;
+signal new_key2: state_array_type;
+signal new_key3: state_array_type;
+signal new_key0_d1: state_array_type;
+signal new_key1_d1: state_array_type;
+signal new_key2_d1: state_array_type;
+signal new_key3_d1: state_array_type;
+
+signal s0_buf  : state_array_type;
+signal s1_buf  : state_array_type;
+signal s2_buf  : state_array_type;
+signal s3_buf  : state_array_type;
+
+signal next_round_data_0: state_array_type;
+signal next_round_data_1: state_array_type;
+signal next_round_data_2: state_array_type;
+signal next_round_data_3: state_array_type;
+
+signal pr_data_0: state_array_type;
+signal pr_data_1: state_array_type;
+signal pr_data_2: state_array_type;
+signal pr_data_3: state_array_type;
+
+signal mix_col_array   : std_logic_vector(0 to 127);
+signal mixcol_key_array: std_logic_vector(0 to 127);
+signal mixcol_key_0    : state_array_type;
+signal mixcol_key_1    : state_array_type;
+signal mixcol_key_2    : state_array_type;
+signal mixcol_key_3    : state_array_type;
+signal key_select_0    : state_array_type;
+signal key_select_1    : state_array_type;
+signal key_select_2    : state_array_type;
+signal key_select_3    : state_array_type; 
+
+signal exp_key_after10Th_rnd0  : state_array_type; 
+signal exp_key_after10Th_rnd1  : state_array_type;
+signal exp_key_after10Th_rnd2  : state_array_type;
+signal exp_key_after10Th_rnd3  : state_array_type;
+
+signal done_d2_delay1 ,done_d2_delay2:std_logic;
+begin
+---------------------------------------
+   tenth_rnd_key_enc:  key_expander 
+             port map(
+                          clk       => clk,
+                          reset     => reset,
+                          key_in_c0 => primekey_reg0,
+                          key_in_c1 => primekey_reg1,
+                          key_in_c2 => primekey_reg2,
+                          key_in_c3 => primekey_reg3,
+                          count     => round_cnt_key,
+                          mode      => '1',
+                          keyout_c0 => exp_key_after10Th_rnd0,
+                          keyout_c1 =>exp_key_after10Th_rnd1,
+                          keyout_c2 => exp_key_after10Th_rnd2,
+                          keyout_c3 => exp_key_after10Th_rnd3
+                       );
+  
+      primekey_reg0     <= (key(127 downto 120),key(119 downto 112),key(111 downto 104),key(103 downto 96));
+      primekey_reg1     <= (key(95 downto 88),key(87 downto 80),key(79 downto 72),key(71 downto 64));        
+      primekey_reg2     <= (key(63 downto 56),key(55 downto 48),key(47 downto 40),key(39 downto 32));
+      primekey_reg3     <= (key(31 downto 24),key(23 downto 16),key(15 downto 8),key(7 downto 0));
+process(clk,reset)
+begin
+  if(reset = '0') then
+   
+    start_d1_key <= '0';
+    start_d2_key <= '0';
+  elsif rising_edge(clk) then
+   
+    start_d1_key <= start_key;
+    start_d2_key <= start_d1_key;
+  end if;
+end process;  	   
+
+process(clk,reset)
+begin
+  if(reset = '0') then
+    round_cnt_key <= 0;
+    flag_cnt_key  <= '0';
+  elsif rising_edge(clk) then
+    if((start_d2_key = '1' and start_d1_key = '0') or flag_cnt_key = '1') then
+      if(round_cnt_key < 11) then
+        round_cnt_key <= round_cnt_key + 1;
+        flag_cnt_key <= '1';
+      else  
+        round_cnt_key <= 0;
+        flag_cnt_key <= '0';
+      end if;  
+    end if;
+  end if;  
+end process;  		   
+
+process(reset,clk,round_cnt_key,
+exp_key_after10Th_rnd0,
+exp_key_after10Th_rnd1,
+exp_key_after10Th_rnd2,
+exp_key_after10Th_rnd3)
+begin
+if(reset = '0') then
+dec_key<=(others =>'0');
+elsif rising_edge(clk) then
+if round_cnt_key = 10 then
+
+dec_key<= exp_key_after10Th_rnd0(0) & exp_key_after10Th_rnd0(1)	&  exp_key_after10Th_rnd0(2) & exp_key_after10Th_rnd0(3) &	
+exp_key_after10Th_rnd1(0) & exp_key_after10Th_rnd1(1)	&  exp_key_after10Th_rnd1(2) & exp_key_after10Th_rnd1(3) &
+exp_key_after10Th_rnd2(0) & exp_key_after10Th_rnd2(1)	&  exp_key_after10Th_rnd2(2) & exp_key_after10Th_rnd2(3) & 
+exp_key_after10Th_rnd3(0) & exp_key_after10Th_rnd3(1)	&  exp_key_after10Th_rnd3(2) & exp_key_after10Th_rnd3(3) ;
+end if;
+end if;
+end process;
+
+    -- Loading the data and keys
+
+process(clk,reset)
+begin
+  if(reset = '1') then
+    key_reg0 <= (others =>(others => '0'));
+    key_reg1 <= (others =>(others => '0'));
+    key_reg2 <= (others =>(others => '0'));
+    key_reg3 <= (others =>(others => '0'));
+    data_in_reg0 <= (others =>(others => '0'));
+    data_in_reg1 <= (others =>(others => '0'));
+    data_in_reg2 <= (others =>(others => '0'));
+    data_in_reg3 <= (others =>(others => '0'));
+ 
+ elsif rising_edge(clk) then
+    if(load = '1' and load_d1 = '0') then
+     
+       key_reg0     <= (dec_key(127 downto 120),dec_key(119 downto 112),dec_key(111 downto 104),dec_key(103 downto 96));
+      key_reg1     <= (dec_key(95 downto 88),dec_key(87 downto 80),dec_key(79 downto 72),dec_key(71 downto 64));        
+      key_reg2     <= (dec_key(63 downto 56),dec_key(55 downto 48),dec_key(47 downto 40),dec_key(39 downto 32));
+      key_reg3     <= (dec_key(31 downto 24),dec_key(23 downto 16),dec_key(15 downto 8),dec_key(7 downto 0));
+	  data_in_reg0 <= (data_in(127 downto 120),data_in(119 downto 112),data_in(111 downto 104),data_in(103 downto 96));
+	  data_in_reg1 <= (data_in(95 downto 88),data_in(87 downto 80),data_in(79 downto 72),data_in(71 downto 64));
+      data_in_reg2 <= (data_in(63 downto 56),data_in(55 downto 48),data_in(47 downto 40),data_in(39 downto 32));
+      data_in_reg3 <= (data_in(31 downto 24),data_in(23 downto 16),data_in(15 downto 8),data_in(7 downto 0));
+    end if;
+  end if;
+end process;
+
+----------STATE MATRIX ROW WORDS ------
+-- Given input xored with given key for generating input to the first round
+
+s0(0) <= data_in_reg0(0) xor key_reg0(0);
+s0(1) <= data_in_reg0(1) xor key_reg0(1);
+s0(2) <= data_in_reg0(2) xor key_reg0(2);
+s0(3) <= data_in_reg0(3) xor key_reg0(3);
+s1(0) <= data_in_reg1(0) xor key_reg1(0);
+s1(1) <= data_in_reg1(1) xor key_reg1(1);
+s1(2) <= data_in_reg1(2) xor key_reg1(2);
+s1(3) <= data_in_reg1(3) xor key_reg1(3);
+s2(0) <= data_in_reg2(0) xor key_reg2(0); 
+s2(1) <= data_in_reg2(1) xor key_reg2(1);
+s2(2) <= data_in_reg2(2) xor key_reg2(2);
+s2(3) <= data_in_reg2(3) xor key_reg2(3);
+s3(0) <= data_in_reg3(0) xor key_reg3(0);
+s3(1) <= data_in_reg3(1) xor key_reg3(1);
+s3(2) <= data_in_reg3(2) xor key_reg3(2);
+s3(3) <= data_in_reg3(3) xor key_reg3(3);
+
+
+
+----------------SUB BYTES TRANSFORMATION--------------------------------------
+
+process(s0_buf,s1_buf,s2_buf,s3_buf)
+begin
+  if(mode = '0') then
+    s_00(0) <= sbox_val(s0_buf(0));
+    s_00(1) <= sbox_val(s0_buf(1));
+    s_00(2) <= sbox_val(s0_buf(2));
+    s_00(3) <= sbox_val(s0_buf(3));
+    
+    s_01(0) <= sbox_val(s1_buf(0));
+    s_01(1) <= sbox_val(s1_buf(1));
+    s_01(2) <= sbox_val(s1_buf(2));
+    s_01(3) <= sbox_val(s1_buf(3));
+    
+    s_02(0) <= sbox_val(s2_buf(0));
+    s_02(1) <= sbox_val(s2_buf(1));
+    s_02(2) <= sbox_val(s2_buf(2));
+    s_02(3) <= sbox_val(s2_buf(3));
+    
+    s_03(0) <= sbox_val(s3_buf(0));
+    s_03(1) <= sbox_val(s3_buf(1));
+    s_03(2) <= sbox_val(s3_buf(2));
+    s_03(3) <= sbox_val(s3_buf(3));
+ 
+ else
+    s_00(0) <= inv_sbox_val(s0_buf(0));
+    s_00(1) <= inv_sbox_val(s0_buf(1));
+    s_00(2) <= inv_sbox_val(s0_buf(2));
+    s_00(3) <= inv_sbox_val(s0_buf(3));
+    
+    s_01(0) <= inv_sbox_val(s1_buf(0));
+    s_01(1) <= inv_sbox_val(s1_buf(1));
+    s_01(2) <= inv_sbox_val(s1_buf(2));
+    s_01(3) <= inv_sbox_val(s1_buf(3));
+    
+    s_02(0) <= inv_sbox_val(s2_buf(0));
+    s_02(1) <= inv_sbox_val(s2_buf(1));
+    s_02(2) <= inv_sbox_val(s2_buf(2));
+    s_02(3) <= inv_sbox_val(s2_buf(3));
+    
+    s_03(0) <= inv_sbox_val(s3_buf(0));
+    s_03(1) <= inv_sbox_val(s3_buf(1));
+    s_03(2) <= inv_sbox_val(s3_buf(2));
+    s_03(3) <= inv_sbox_val(s3_buf(3));
+  end if;
+end process;  
+
+-----------SHIFT ROWS TRANSFORMATION--------------------------------------
+
+process(s_00,s_01,s_02,s_03)
+begin
+  if(mode = '1') then
+    r_00 <= (s_00(0),s_01(1),s_02(2),s_03(3));
+    r_01 <= (s_01(0),s_02(1),s_03(2),s_00(3));
+    r_02 <= (s_02(0),s_03(1),s_00(2),s_01(3));
+    r_03 <= (s_03(0),s_00(1),s_01(2),s_02(3));
+  else
+    r_00 <= (s_00(0),s_03(1),s_02(2),s_01(3)); 
+    r_01 <= (s_01(0),s_00(1),s_03(2),s_02(3)); 
+    r_02 <= (s_02(0),s_01(1),s_00(2),s_03(3)); 
+    r_03 <= (s_03(0),s_02(1),s_01(2),s_00(3)); 
+  end if;
+end process;  
+
+-----------MIX COLUMNS TRANSFORMATION--------------------------------------        
+
+mix_col_array <= mix_cols_routine(r_00,r_01,r_02,r_03,mode);
+mixcol_0 <= (mix_col_array(0 to 7),mix_col_array(8 to 15),mix_col_array(16 to 23),mix_col_array(24 to 31));
+mixcol_1 <= (mix_col_array(32 to 39),mix_col_array(40 to 47),mix_col_array(48 to 55),mix_col_array(56 to 63));
+mixcol_2 <= (mix_col_array(64 to 71),mix_col_array(72 to 79),mix_col_array(80 to 87),mix_col_array(88 to 95));
+mixcol_3 <= (mix_col_array(96 to 103),mix_col_array(104 to 111),mix_col_array(112 to 119),mix_col_array(120 to 127));
+
+mixcol_key_array <= mix_cols_routine(new_key0_d1,new_key1_d1,new_key2_d1,new_key3_d1,mode);
+mixcol_key_0 <= (mixcol_key_array(0 to 7),mixcol_key_array(8 to 15),mixcol_key_array(16 to 23),mixcol_key_array(24 to 31));
+mixcol_key_1 <= (mixcol_key_array(32 to 39),mixcol_key_array(40 to 47),mixcol_key_array(48 to 55),mixcol_key_array(56 to 63));
+mixcol_key_2 <= (mixcol_key_array(64 to 71),mixcol_key_array(72 to 79),mixcol_key_array(80 to 87),mixcol_key_array(88 to 95));
+mixcol_key_3 <= (mixcol_key_array(96 to 103),mixcol_key_array(104 to 111),mixcol_key_array(112 to 119),mixcol_key_array(120 to 127));
+
+---------ADD ROUND KEY STEP-------------------------------------------------
+
+expand_key:  key_expander 
+             port map(
+                          clk       => clk,
+                          reset     => reset,
+                          key_in_c0 => key_reg0,
+                          key_in_c1 => key_reg1,
+                          key_in_c2 => key_reg2,
+                          key_in_c3 => key_reg3,
+                          count     => round_cnt,
+                          mode      => mode,
+                          keyout_c0 => new_key0,
+                          keyout_c1 => new_key1,
+                          keyout_c2 => new_key2,
+                          keyout_c3 => new_key3
+                       );
+
+--- Registered to increase speed
+
+process(clk,reset)  
+begin
+  if(reset = '0') then
+    new_key0_d1 <= (others =>(others => '0'));
+    new_key1_d1 <= (others =>(others => '0'));
+    new_key2_d1 <= (others =>(others => '0'));
+    new_key3_d1 <= (others =>(others => '0'));
+  elsif rising_edge(clk) then  
+    new_key0_d1 <= new_key0;
+    new_key1_d1 <= new_key1;
+    new_key2_d1 <= new_key2;
+    new_key3_d1 <= new_key3;
+  end if;
+end process;
+
+-- Previous round output as input to next round
+
+next_round_data_0 <= (pr_data_0(0) xor key_select_0(0),pr_data_0(1) xor key_select_0(1),pr_data_0(2) xor key_select_0(2),pr_data_0(3) xor key_select_0(3)); 
+next_round_data_1 <= (pr_data_1(0) xor key_select_1(0),pr_data_1(1) xor key_select_1(1),pr_data_1(2) xor key_select_1(2),pr_data_1(3) xor key_select_1(3));  
+next_round_data_2 <= (pr_data_2(0) xor key_select_2(0),pr_data_2(1) xor key_select_2(1),pr_data_2(2) xor key_select_2(2),pr_data_2(3) xor key_select_2(3));  
+next_round_data_3 <= (pr_data_3(0) xor key_select_3(0),pr_data_3(1) xor key_select_3(1),pr_data_3(2) xor key_select_3(2),pr_data_3(3) xor key_select_3(3));  
+
+-- Multiplexing for choosing data for the last round
+
+pr_data_0 <= r_00 when round_cnt=11 else
+             mixcol_0;
+pr_data_1 <= r_01 when round_cnt=11 else
+             mixcol_1;
+pr_data_2 <= r_02 when round_cnt=11 else
+             mixcol_2;
+pr_data_3 <= r_03 when round_cnt=11 else
+             mixcol_3;
+             
+key_select_0 <= new_key0_d1 when (mode = '1') else
+                mixcol_key_0 when(mode = '0' and round_cnt < 11) else
+                new_key0_d1;
+key_select_1 <= new_key1_d1 when (mode = '1') else
+                mixcol_key_1 when(mode = '0' and round_cnt < 11) else
+                new_key1_d1;
+key_select_2 <= new_key2_d1 when (mode = '1') else
+                mixcol_key_2 when(mode = '0' and round_cnt < 11) else
+                new_key2_d1;
+key_select_3 <= new_key3_d1 when (mode = '1') else
+                mixcol_key_3 when(mode = '0' and round_cnt < 11) else
+                new_key3_d1; 
+				
+process(clk)
+	begin
+                            if rising_edge(clk) then
+			done_d2_delay1<=done_d2;
+		end if;
+	end process;  
+	
+process(clk,done_d2_delay1)
+	begin
+		if rising_edge(clk) then
+			done_d2_delay2<=done_d2_delay1;
+		end if;
+	end process;   
+done<= done_d2 and not(done_d2_delay2);   
+
+-- Registering start and load             
+
+process(clk,reset)
+begin
+  if(reset = '0') then
+    load_d1  <= '0';
+    start_d1 <= '0';
+    start_d2 <= '0';
+  elsif rising_edge(clk) then
+    load_d1  <= load;
+    start_d1 <= start;
+    start_d2 <= start_d1;
+  end if;
+end process;  
+
+-- Register outputs at end of each round
+
+process(clk,reset)
+begin
+  if(reset = '0') then
+    s0_buf <= (others =>(others => '0'));
+    s1_buf <= (others =>(others => '0'));
+    s2_buf <= (others =>(others => '0'));
+    s3_buf <= (others =>(others => '0'));
+  elsif rising_edge(clk) then
+    if(round_cnt = 0 or round_cnt = 1) then
+      s0_buf <= s0;
+      s1_buf <= s1;
+      s2_buf <= s2;
+      s3_buf <= s3;
+    else
+      s0_buf <= next_round_data_0;
+      s1_buf <= next_round_data_1;
+      s2_buf <= next_round_data_2;
+      s3_buf <= next_round_data_3;
+    end if;
+  end if;  
+end process;  
+
+-- Initiator process
+
+process(clk,reset)
+begin
+  if(reset = '0') then
+    round_cnt <= 0;
+    flag_cnt <= '0';
+  elsif rising_edge(clk) then
+    if((start_d2 = '1' and start_d1 = '0') or flag_cnt = '1') then
+      if(round_cnt < 11) then
+        round_cnt <= round_cnt + 1;
+        flag_cnt <= '1';
+      else  
+        round_cnt <= 0;
+        flag_cnt <= '0';
+      end if;  
+    end if;
+  end if;  
+end process;  
+
+-- Completion signaling process
+
+process(clk,reset)
+begin
+  if(reset = '0') then
+    done_d1 <= '0';
+    done_d2 <= '0';
+  elsif rising_edge(clk) then
+    if(start_d2 = '1' and start_d1 = '0') then
+      done_d1 <= '0';
+      done_d2 <= '0';
+    elsif(round_cnt = 10) then
+      done_d1 <= '1';
+    end if;  
+    done_d2 <= done_d1;
+  end if;
+end process;  
+
+
+-- Output assignment process        
+
+process(clk,reset)
+begin
+  if(reset= '0') then
+    data_out <= (others => '0');
+  elsif rising_edge(clk) then  
+    if(done_d1 = '1' and done_d2 = '0') then
+        data_out <= (next_round_data_0(0) & next_round_data_0(1) & next_round_data_0(2) & next_round_data_0(3) &
+                     next_round_data_1(0) & next_round_data_1(1) & next_round_data_1(2) & next_round_data_1(3) &
+                     next_round_data_2(0) & next_round_data_2(1) & next_round_data_2(2) & next_round_data_2(3) &
+                     next_round_data_3(0) & next_round_data_3(1) & next_round_data_3(2) & next_round_data_3(3));
+    end if;
+  end if;
+end process;
+end mapping;
+
+
+---AES 128’s CBC Code for Encryption
+
+library IEEE;
+use IEEE.std_logic_1164.all;
+
+entity CBC_ENC_TOP is
+	port (
+		RESET: in STD_LOGIC	;	
+		CLK:IN STD_LOGIC;	
+		
+		KEY_IV:IN STD_LOGIC_VECTOR(255 DOWNTO 0);
+		KEY_IV_RDY:IN STD_LOGIC;
+		MSG_IN_RDY:IN STD_LOGIC;	
+		MSG_IN:IN STD_LOGIC_VECTOR(127 DOWNTO 0);  
+		MSG_OUT_RDY:OUT STD_LOGIC;
+		MSG_OUT:OUT STD_LOGIC_VECTOR(127 DOWNTO 0)
+		);
+end CBC_ENC_TOP;
+
+--}} End of automatically maintained section
+
+architecture CBC_ENC_TOP of CBC_ENC_TOP is		
+	component aes128_fast1 is
+		GENERIC (MODE:STD_LOGIC:='1');
+		port(
+			clk       : in std_logic;
+			reset     : in std_logic;
+			start     : in std_logic; -- to initiate the encryption/decryption process after load
+			-- mode      : in std_logic; -- to select encryption or decryption
+			load      : in std_logic; -- to load the input and keys 
+			key       : in std_logic_vector(127 downto 0);
+			data_in   : in std_logic_vector(127 downto 0);
+			data_out  : out std_logic_vector(127 downto 0);
+			done      : out std_logic
+			);
+	end component; 
+	
+	
+SIGNAL  KEY,IV,new1_iv,MSG_OUT_TEMP,NEW_MSG :STD_LOGIC_VECTOR(127 DOWNTO 0); 
+SIGNAL KEY_IV_RDY_D1,START,ENC_DONE,load,reset_NOT  :STD_LOGIC;
+begin
+	
+-- <<enter your statements here>>	
+	MSG_OUT<=MSG_OUT_TEMP;	 
+	MSG_OUT_RDY<=ENC_DONE;
+	
+	KEY<=KEY_IV(255 DOWNTO 128);   
+	IV<= KEY_IV(127 DOWNTO 0); 	 
+	
+PROCESS(RESET,CLK)
+	BEGIN
+		IF RESET='0' THEN	  
+			KEY_IV_RDY_D1<='0';
+		ELSIF RISING_EDGE(CLK) THEN
+			IF KEY_IV_RDY='1' THEN
+				KEY_IV_RDY_D1<='1';
+			ELSE
+				KEY_IV_RDY_D1<='0';
+			END IF;
+		END IF;
+	END PROCESS;
+	
+	PROCESS(RESET,CLK)
+	BEGIN
+		IF RESET='0' THEN	  
+			load<='0';
+		ELSIF RISING_EDGE(CLK) THEN
+			IF MSG_IN_RDY='1' THEN
+				load<='1';
+			ELSE
+				load<='0';
+			END IF;
+		END IF;
+	END PROCESS;  
+		
+PROCESS(RESET,CLK)
+	BEGIN
+		IF RESET='0' THEN	  
+			start<='0';
+		ELSIF RISING_EDGE(CLK) THEN
+			IF load='1' THEN
+				start<='1';
+			ELSE
+				start<='0';
+			END IF;
+		END IF;
+	END PROCESS;
+	
+	process  (reset,clk,ENC_DONE,KEY_IV_RDY_D1)
+	begin
+		if  reset  = '0'  then
+			new1_iv  <= (others =>'0');
+		elsif rising_edge(clk) then
+			if 	KEY_IV_RDY_D1='1'   then
+				new1_iv  <=  iv;
+			elsif 	ENC_DONE='1' then
+				new1_iv  <= MSG_OUT_TEMP;
+			end  if;  	
+		end if;
+	end  process;
+
+		process(reset,MSG_IN_RDY,MSG_IN,new1_iv)
+	begin
+		if reset='0' then
+			NEW_MSG<=(others =>'0');
+		elsif rising_edge(MSG_IN_RDY) then
+			
+				NEW_MSG <= MSG_IN XOR  new1_iv ;  
+		end if;
+	end process; 
+	
+	
+	ENC:  aes128_fast1 
+	GENERIC MAP(MODE=>'1')
+	port MAP(
+		clk       => clk,
+		reset      =>reset_NOT ,
+		start     =>START ,
+		load       => load,
+		key        => KEY,
+		data_in    =>NEW_MSG ,
+		data_out  =>MSG_OUT_TEMP ,
+		done      =>ENC_DONE 
+		);
+end CBC_ENC_TOP;
+
+--AES 128’s CBC Code for Decryption
+
+library IEEE;
+use IEEE.std_logic_1164.all;
+
+entity CBC_DEC_TOP is
+	port (
+		RESET: in STD_LOGIC	;	
+		CLK:IN STD_LOGIC;	
+		
+		KEY_IV:IN STD_LOGIC_VECTOR(255 DOWNTO 0);
+		KEY_IV_RDY:IN STD_LOGIC;
+		
+		MSG_IN_RDY:IN STD_LOGIC;	
+		MSG_IN:IN STD_LOGIC_VECTOR(127 DOWNTO 0);  
+		
+		MSG_OUT_RDY:OUT STD_LOGIC;
+		DEC_OUT:OUT STD_LOGIC_VECTOR(127 DOWNTO 0)
+		
+		);
+end CBC_DEC_TOP;
+
+--}} End of automatically maintained section
+
+architecture CBC_DEC_TOP of CBC_DEC_TOP is 
+	component aes128_fast2 
+		GENERIC (MODE:STD_LOGIC:='0');
+		port(
+			clk       : in std_logic;
+			reset     : in std_logic;		
+			start_key	: in std_logic;
+			start     : in std_logic; -- to initiate the encryption/decryption process after load			          -- mode      : in std_logic; -- to select encryption or decryption
+			load      : in std_logic; -- to load the input and keys. 
+			key       : in std_logic_vector(127 downto 0);
+			-- key_out   :out std_logic_vector(127 downto 0);
+			data_in   : in std_logic_vector(127 downto 0);
+			data_out  : out std_logic_vector(127 downto 0);
+			done      : out std_logic
+			);
+		
+	end component; 
+	
+	SIGNAL KEY,IV,new1_iv,DEC_OUT_TEMP :STD_LOGIC_VECTOR(127 DOWNTO 0); 	  
+	SIGNAL KEY_IV_RDY_D1,START,DEC_DONE,reset_NOT :STD_LOGIC;
+
+begin
+	-- <<enter your statements here>>		
+	
+	KEY<=KEY_IV(255 DOWNTO 128);   
+	IV<= KEY_IV(127 DOWNTO 0); 	 
+	
+	PROCESS(RESET,CLK)
+	BEGIN
+		IF RESET='0' THEN	  
+			KEY_IV_RDY_D1<='0';
+		ELSIF RISING_EDGE(CLK) THEN
+			IF KEY_IV_RDY='1' THEN
+				KEY_IV_RDY_D1<='1';
+			ELSE
+				KEY_IV_RDY_D1<='0';
+			END IF;
+		END IF;
+	END PROCESS;
+	
+	PROCESS(RESET,CLK)
+	BEGIN
+		IF RESET='0' THEN	  
+			START<='0';
+		ELSIF RISING_EDGE(CLK) THEN
+			IF MSG_IN_RDY='1' THEN
+				START<='1';
+			ELSE
+				START<='0';
+			END IF;
+		END IF;
+	END PROCESS;
+	
+	process  (reset,DEC_DONE,KEY_IV_RDY_D1,iv,MSG_IN)
+	begin
+		if  reset  = '0'  then
+			new1_iv  <= (others =>'0');
+		elsif KEY_IV_RDY_D1='1'   then
+			new1_iv  <=  iv;
+		elsif falling_edge(DEC_DONE) then
+			new1_iv  <= MSG_IN;
+		end  if; 
+	end  process;	 
+process(reset,DEC_DONE,DEC_OUT_TEMP,new1_iv)
+	begin
+		if reset='0' then
+			DEC_OUT<=(others =>'0');
+		elsif rising_edge(DEC_DONE) then
+			
+			DEC_OUT<=	  DEC_OUT_TEMP XOR  new1_iv ;	  
+		end if;
+	end process;
+	
+	
+PROCESS(RESET,CLK)
+	BEGIN
+		IF RESET='0' THEN	  
+			MSG_OUT_RDY<='0';
+		ELSIF RISING_EDGE(CLK) THEN
+			IF DEC_DONE='1' THEN
+				MSG_OUT_RDY<='1';
+			ELSE
+				MSG_OUT_RDY<='0';
+			END IF;
+		END IF;
+	END PROCESS;
+
+	reset_NOT<=NOT(reset);
+	DEC_INST: aes128_fast2 
+	GENERIC MAP(MODE=>'0')
+	port MAP(
+		clk       =>CLK ,
+		reset     =>reset,	
+		start_key=> KEY_IV_RDY_D1,
+		start    =>START ,
+		load      =>MSG_IN_RDY ,
+		key       =>key ,
+		data_in   => MSG_IN,
+		data_out  => DEC_OUT_TEMP,
+		done      => DEC_DONE
+		);	
+	
+end CBC_DEC_TOP;
+
+-- Title       : Test Bench for AES128 ECB Encryption
+-- Company     : ECIL--
+-- Generated   : 6/20/2008, 12:17 PM
+-- By          : Active-HDL Built-in Test Bench Generator ver. 1.2s
+-------------------------------------------------------------------------------
+
+library ieee;
+use work.aes_package.all;
+use ieee.std_logic_unsigned.all;
+use ieee.std_logic_1164.all;
+
+	-- Add your library and packages declaration here ...
+
+entity aes128_fast1_tb is
+	-- Generic declarations of the tested unit
+		generic(
+		MODE : std_logic := '1' );
+end aes128_fast1_tb;
+
+architecture TB_ARCHITECTURE of aes128_fast1_tb is
+	
+-- Component declaration of the tested unit
+	component aes128_fast1
+		generic(
+		MODE : std_logic := '1' );
+	port(
+		clk : in std_logic;
+		reset : in std_logic;
+		start : in std_logic;
+		load : in std_logic;
+		key : in std_logic_vector(127 downto 0);
+		data_in : in std_logic_vector(127 downto 0);
+		data_out : out std_logic_vector(127 downto 0);
+		done : out std_logic );
+	end component;
+
+-- Stimulus signals - signals mapped to the input and inout ports of tested entity
+	signal clk : std_logic;
+	signal reset : std_logic;
+	signal start : std_logic;
+	signal load : std_logic;
+	signal key : std_logic_vector(127 downto 0);
+	signal data_in : std_logic_vector(127 downto 0);
+	
+-- Observed signals - signals mapped to the output ports of tested entity
+	signal data_out : std_logic_vector(127 downto 0);
+	signal done : std_logic;
+
+	-- Add your code here ...
+begin
+	-- Unit Under Test port map
+	UUT : aes128_fast1
+		generic map ( MODE => MODE)
+		
+                              port map (
+			clk => clk,
+			reset => reset,
+			start => start,
+			load => load,
+			key => key,
+			data_in => data_in,
+			data_out => data_out,
+			done => done
+		);
+
+	-- Add your stimulus here ... 
+	
+            key <= X"2b7e151628aed2a6abf7158809cf4f3c";
+	data_in <= X"3243f6a8885a308d313198a2e0370734";
+
+end TB_ARCHITECTURE;
+
+configuration TESTBENCH_FOR_aes128_fast1 of aes128_fast1_tb is
+	for TB_ARCHITECTURE
+		for UUT : aes128_fast1
+			use entity work.aes128_fast1(mapping);
+		end for;
+	end for;
+end TESTBENCH_FOR_aes128_fast1;
+
+
+
+-- Title       : Test Bench for AES128 ECB Decryption
+-- Company     : ECIL
+-- Generated   : 6/20/2008, 12:54 PM
+-- By          : Active-HDL Built-in Test Bench Generator ver. 1.2s
+-------------------------------------------------------------------------------
+
+library ieee;
+use work.aes_package.all;
+use ieee.std_logic_unsigned.all;
+use ieee.std_logic_1164.all;
+
+	-- Add your library and packages declaration here ...
+
+entity aes128_fast2_tb is
+	-- Generic declarations of the tested unit
+		generic(
+		MODE : std_logic := '0' );
+end aes128_fast2_tb;
+
+architecture TB_ARCHITECTURE of aes128_fast2_tb is
+	
+-- Component declaration of the tested unit
+	component aes128_fast2
+		generic(
+		MODE : std_logic := '0' );
+	port(
+		clk : in std_logic;
+		reset : in std_logic;
+		start_key : in std_logic;
+		start : in std_logic;
+		load : in std_logic;
+		key : in std_logic_vector(127 downto 0);
+		data_in : in std_logic_vector(127 downto 0);
+		data_out : out std_logic_vector(127 downto 0);
+		done : out std_logic );
+	end component;
+
+-- Stimulus signals - signals mapped to the input and inout ports of tested entity
+	signal clk : std_logic;
+	signal reset : std_logic;
+	signal start_key : std_logic;
+	signal start : std_logic;
+	signal load : std_logic;
+	signal key : std_logic_vector(127 downto 0);
+	signal data_in : std_logic_vector(127 downto 0);
+	
+-- Observed signals - signals mapped to the output ports of tested entity
+	signal data_out : std_logic_vector(127 downto 0);
+	signal done : std_logic;
+
+	-- Add your code here ...
+
+begin
+
+-- Unit Under Test port map
+	UUT : aes128_fast2
+		generic map (
+			MODE => MODE
+		)
+
+		port map (
+			clk => clk,
+			reset => reset,
+			start_key => start_key,
+			start => start,
+			load => load,
+			key => key,
+			data_in => data_in,
+			data_out => data_out,
+			done => done
+		);
+
+	
+
+-- Add your stimulus here ...  
+	
+             key <= X"2b7e151628aed2a6abf7158809cf4f3c";
+	data_in <= X"3925841d02dc09fbdc118597196a0b32";
+	
+
+end TB_ARCHITECTURE;
+
+configuration TESTBENCH_FOR_aes128_fast2 of aes128_fast2_tb is
+	for TB_ARCHITECTURE
+		for UUT : aes128_fast2
+			use entity work.aes128_fast2(mapping);
+		end for;
+	end for;
+
+end TESTBENCH_FOR_aes128_fast2;
+
+-- Title       : Test Bench for AES 128 CBC encryption
+-- Company     : ECIL
+-- Generated   : 6/20/2008, 12:32 PM
+-- By          : Active-HDL Built-in Test Bench Generator ver. 1.2s
+-------------------------------------------------------------------------------
+
+library ieee;
+use ieee.std_logic_1164.all;
+
+	-- Add your library and packages declaration here ...
+
+entity cbc_enc_top_tb is
+end cbc_enc_top_tb;
+
+architecture TB_ARCHITECTURE of cbc_enc_top_tb is
+	
+-- Component declaration of the tested unit
+	component cbc_enc_top
+	port(
+		RESET : in std_logic;
+		CLK : in std_logic;
+		KEY_IV : in std_logic_vector(255 downto 0);
+		KEY_IV_RDY : in std_logic;
+		MSG_IN_RDY : in std_logic;
+		MSG_IN : in std_logic_vector(127 downto 0);
+		MSG_OUT_RDY : out std_logic;
+		MSG_OUT : out std_logic_vector(127 downto 0) );
+	end component;
+
+-- Stimulus signals - signals mapped to the input and inout ports of tested entity
+	signal RESET : std_logic;
+	signal CLK : std_logic;
+	signal KEY_IV : std_logic_vector(255 downto 0);
+	signal KEY_IV_RDY : std_logic;
+	signal MSG_IN_RDY : std_logic;
+	signal MSG_IN : std_logic_vector(127 downto 0);
+	
+-- Observed signals - signals mapped to the output ports of tested entity
+	signal MSG_OUT_RDY : std_logic;
+	signal MSG_OUT : std_logic_vector(127 downto 0);
+
+	-- Add your code here ...
+begin
+               -- Unit Under Test port map
+	UUT : cbc_enc_top
+		port map (
+			RESET => RESET,
+			CLK => CLK,
+			KEY_IV => KEY_IV,
+			KEY_IV_RDY => KEY_IV_RDY,
+			MSG_IN_RDY => MSG_IN_RDY,
+			MSG_IN => MSG_IN,
+			MSG_OUT_RDY => MSG_OUT_RDY,
+			MSG_OUT => MSG_OUT
+		);
+
+	-- Add your stimulus here ...		 
+KEY_IV <= 
+X"2b7e151628aed2a6abf7158809cf4f3c00000000000000000000000000000000";
+	MSG_IN <= X"3243f6a8885a308d313198a2e0370734";
+
+end TB_ARCHITECTURE;
+
+configuration TESTBENCH_FOR_cbc_enc_top of cbc_enc_top_tb is
+	for TB_ARCHITECTURE
+		for UUT : cbc_enc_top
+			use entity work.cbc_enc_top(cbc_enc_top);
+		end for;
+	end for;
+end TESTBENCH_FOR_cbc_enc_top;
+
+
+-- Title       : Test Bench for AES 128 CBC Decryption
+-- Company     : ECIL
+-- By          : Active-HDL Built-in Test Bench Generator ver. 1.2s
+
+library ieee;
+use ieee.std_logic_1164.all;
+
+	-- Add your library and packages declaration here ...
+
+entity cbc_dec_top_tb is
+end cbc_dec_top_tb;
+
+architecture TB_ARCHITECTURE of cbc_dec_top_tb is
+	
+-- Component declaration of the tested unit
+	component cbc_dec_top
+	port(
+		RESET : in std_logic;
+		CLK : in std_logic;
+		KEY_IV : in std_logic_vector(255 downto 0);
+		KEY_IV_RDY : in std_logic;
+		MSG_IN_RDY : in std_logic;
+		MSG_IN : in std_logic_vector(127 downto 0);
+		MSG_OUT_RDY : out std_logic;
+		DEC_OUT : out std_logic_vector(127 downto 0) );
+	end component;
+
+-- Stimulus signals - signals mapped to the input and inout ports of tested entity
+	signal RESET : std_logic;
+	signal CLK : std_logic;
+	signal KEY_IV : std_logic_vector(255 downto 0);
+	signal KEY_IV_RDY : std_logic;
+	signal MSG_IN_RDY : std_logic;
+	signal MSG_IN : std_logic_vector(127 downto 0);
+	
+-- Observed signals - signals mapped to the output ports of tested entity
+	signal MSG_OUT_RDY : std_logic;
+	signal DEC_OUT : std_logic_vector(127 downto 0);
+
+	-- Add your code here ...
+begin
+              -- Unit Under Test port map
+	UUT : cbc_dec_top
+		port map (
+			RESET => RESET,
+			CLK => CLK,
+			KEY_IV => KEY_IV,
+			KEY_IV_RDY => KEY_IV_RDY,
+			MSG_IN_RDY => MSG_IN_RDY,
+			MSG_IN => MSG_IN,
+			MSG_OUT_RDY => MSG_OUT_RDY,
+			DEC_OUT => DEC_OUT
+		);
+
+	-- Add your stimulus here ...	
+	
+KEY_IV <= X"2b7e151628aed2a6abf7158809cf4f3c00000000000000000000000000000000";
+	MSG_IN <= X"3925841d02dc09fbdc118597196a0b32"; 
+	
+
+end TB_ARCHITECTURE;
+
+configuration TESTBENCH_FOR_cbc_dec_top of cbc_dec_top_tb is
+	for TB_ARCHITECTURE
+		for UUT : cbc_dec_top
+			use entity work.cbc_dec_top(cbc_dec_top);
+		end for;
+	end for;
+end TESTBENCH_FOR_cbc_dec_top;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
